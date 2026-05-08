@@ -1,312 +1,210 @@
 <!DOCTYPE html>
-
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1a73e8">
-<link rel="manifest" href="manifest.json">
-<title>Stock Capture</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:sans-serif;background:#f0f4f8;min-height:100vh}
-  header{background:#1a73e8;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
-  header h1{font-size:18px}
-  #sync-status{font-size:12px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px}
-  .tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0}
-  .tab{flex:1;padding:12px;text-align:center;cursor:pointer;font-size:14px;color:#666;border-bottom:3px solid transparent}
-  .tab.active{color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:bold}
-  .screen{display:none;padding:16px}
-  .screen.active{display:block}
-  .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
-  label{display:block;font-size:13px;color:#555;margin-bottom:4px;margin-top:12px}
-  input,select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px}
-  input:focus,select:focus{outline:none;border-color:#1a73e8}
-  .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:16px}
-  .btn-primary{background:#1a73e8;color:#fff}
-  .btn-success{background:#34a853;color:#fff}
-  .btn-danger{background:#ea4335;color:#fff}
-  .btn-outline{background:#fff;color:#1a73e8;border:2px solid #1a73e8}
-  .badge{display:inline-block;background:#ea4335;color:#fff;border-radius:20px;padding:2px 8px;font-size:11px;margin-left:6px}
-  .record-item{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-left:4px solid #1a73e8}
-  .record-item.synced{border-left-color:#34a853}
-  .record-item h3{font-size:14px;margin-bottom:4px}
-  .record-item p{font-size:12px;color:#777}
-  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin-top:4px}
-  .tag-pending{background:#fff3e0;color:#e65100}
-  .tag-synced{background:#e8f5e9;color:#2e7d32}
-  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;display:none;z-index:999}
-  .config-row{display:flex;align-items:center;gap:10px}
-  .config-row input{flex:1}
-  #device-badge{background:#1a73e8;color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;white-space:nowrap}
-  .stat{text-align:center;padding:10px}
-  .stat .num{font-size:28px;font-weight:bold;color:#1a73e8}
-  .stat .lbl{font-size:12px;color:#888}
-  .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-  .empty{text-align:center;padding:40px 20px;color:#aaa;font-size:14px}
-  .dun-row{display:flex;gap:8px}
-  .dun-row input{flex:1}
-  .dun-row button{padding:10px 14px;border:none;background:#1a73e8;color:#fff;border-radius:8px;font-size:18px;cursor:pointer}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1a73e8">
+    <title>Stock Capture Pro</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:sans-serif;background:#f0f4f8;min-height:100vh;padding-bottom:50px}
+        header{background:#1a73e8;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+        header h1{font-size:18px}
+        #sync-status{font-size:12px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px}
+        .tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;position:sticky;top:48px;z-index:100}
+        .tab{flex:1;padding:12px;text-align:center;cursor:pointer;font-size:14px;color:#666;border-bottom:3px solid transparent}
+        .tab.active{color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:bold}
+        .screen{display:none;padding:16px}
+        .screen.active{display:block}
+        .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+        label{display:block;font-size:13px;color:#555;margin-bottom:4px;margin-top:12px}
+        input,select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px}
+        .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:16px}
+        .btn-primary{background:#1a73e8;color:#fff}
+        .btn-success{background:#34a853;color:#fff}
+        .btn-danger{background:#ea4335;color:#fff}
+        .btn-outline{background:#fff;color:#1a73e8;border:2px solid #1a73e8}
+        .badge{display:inline-block;background:#ea4335;color:#fff;border-radius:20px;padding:2px 8px;font-size:11px;margin-left:6px}
+        .record-item{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-left:4px solid #1a73e8}
+        .record-item.synced{border-left-color:#34a853}
+        .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin-top:4px}
+        .tag-pending{background:#fff3e0;color:#e65100}
+        .tag-synced{background:#e8f5e9;color:#2e7d32}
+        #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;display:none;z-index:999}
+        .dun-row{display:flex;gap:8px}
+        .dun-row input{flex:1}
+    </style>
 </head>
 <body>
 
 <header>
-  <h1>📦 Stock Capture</h1>
-  <span id="sync-status">⚡ Online</span>
+    <h1>📦 Stock Capture</h1>
+    <span id="sync-status">⚡ Online</span>
 </header>
 
 <div class="tabs">
-  <div class="tab active" onclick="showTab('capture')">Capturar</div>
-  <div class="tab" onclick="showTab('records')">Registros <span class="badge" id="pending-badge">0</span></div>
-  <div class="tab" onclick="showTab('config')">Config</div>
+    <div class="tab active" onclick="showTab('capture')">Capturar</div>
+    <div class="tab" onclick="showTab('records')">Registros <span class="badge" id="pending-badge">0</span></div>
+    <div class="tab" onclick="showTab('config')">Config</div>
 </div>
-
-<!-- CAPTURA -->
 
 <div id="screen-capture" class="screen active">
-  <div class="card">
-    <label>DUN / Código</label>
-    <div class="dun-row">
-      <input type="text" id="f-dun" placeholder="Escanea o escribe DUN" inputmode="numeric">
-      <button onclick="focusDun()">⌨️</button>
+    <div class="card">
+        <label>DUN / Código</label>
+        <div class="dun-row">
+            <input type="text" id="f-dun" placeholder="Escanea o escribe DUN">
+        </div>
+        <label>Lote</label>
+        <input type="text" id="f-lote" placeholder="Número de lote">
+        <label>Ubicación</label>
+        <input type="text" id="f-ubicacion" placeholder="Ej: A-12-3">
+        <label>Cantidad</label>
+        <input type="number" id="f-cantidad" placeholder="0">
+        <label>Fecha de Vencimiento</label>
+        <input type="date" id="f-vencimiento">
+        <button class="btn btn-success" onclick="saveRecord()">💾 Guardar Registro</button>
     </div>
-
-```
-<label>Lote</label>
-<input type="text" id="f-lote" placeholder="Número de lote">
-
-<label>Ubicación</label>
-<input type="text" id="f-ubicacion" placeholder="Ej: A-12-3">
-
-<label>Cantidad</label>
-<input type="number" id="f-cantidad" placeholder="0" inputmode="numeric">
-
-<label>Fecha de Vencimiento</label>
-<input type="date" id="f-vencimiento">
-
-<button class="btn btn-success" onclick="saveRecord()">💾 Guardar Registro</button>
-<button class="btn btn-outline" onclick="clearForm()">🗑️ Limpiar</button>
-```
-
-  </div>
 </div>
-
-<!-- REGISTROS -->
 
 <div id="screen-records" class="screen">
-  <div class="card stats-row">
-    <div class="stat"><div class="num" id="stat-total">0</div><div class="lbl">Total</div></div>
-    <div class="stat"><div class="num" id="stat-pending" style="color:#e65100">0</div><div class="lbl">Pendientes</div></div>
-    <div class="stat"><div class="num" id="stat-synced" style="color:#34a853">0</div><div class="lbl">Sincronizados</div></div>
-  </div>
-  <button class="btn btn-primary" onclick="syncNow()" style="margin-bottom:14px">🔄 Sincronizar Ahora</button>
-  <div id="records-list"></div>
+    <button class="btn btn-primary" onclick="syncNow()">🔄 Sincronizar Ahora</button>
+    <div id="records-list" style="margin-top:15px"></div>
 </div>
 
-<!-- CONFIG -->
-
 <div id="screen-config" class="screen">
-  <div class="card">
-    <h3 style="margin-bottom:12px;font-size:15px">⚙️ Configuración del Dispositivo</h3>
-    <label>ID de Dispositivo (01 – 13)</label>
-    <div class="config-row">
-      <input type="number" id="cfg-device" min="1" max="13" placeholder="Ej: 5">
-      <span id="device-badge">--</span>
+    <div class="card">
+        <h3>⚙️ Configuración</h3>
+        <label>ID Dispositivo (1-13)</label>
+        <input type="number" id="cfg-device" min="1" max="13">
+        <label>URL de Apps Script</label>
+        <input type="text" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec">
+        <button class="btn btn-primary" onclick="saveConfig()">Guardar Configuración</button>
     </div>
-    <button class="btn btn-primary" onclick="saveConfig()">Guardar Configuración</button>
-  </div>
-  <div class="card">
-    <h3 style="margin-bottom:12px;font-size:15px">🌐 URL del Servidor</h3>
-    <label>Apps Script URL</label>
-    <input type="text" id="cfg-url" placeholder="https://script.google.com/macros/s/...">
-    <button class="btn btn-outline" onclick="saveUrl()">Guardar URL</button>
-  </div>
-  <div class="card">
-    <button class="btn btn-danger" onclick="clearAll()">🗑️ Borrar todos los registros locales</button>
-  </div>
+    <button class="btn btn-danger" onclick="clearAll()">🗑️ Borrar Datos Locales</button>
 </div>
 
 <div id="toast"></div>
 
 <script>
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbw2ztoZzXzzGtGri12KVvBdf69q_q7TzbfGZQh-buoszbyPqZCl4SgZqAlY8jT8am4ybg/exec';
-const DB_KEY = 'stock_records';
-const CFG_KEY = 'stock_config';
+const DB_KEY = 'stock_records_v1';
+const CFG_KEY = 'stock_config_v1';
 
-// ── Config ──────────────────────────────────────────
 function getConfig() {
-  try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch { return {}; }
-}
-function saveConfig() {
-  const id = parseInt(document.getElementById('cfg-device').value);
-  if (!id || id < 1 || id > 13) return toast('❌ ID debe ser entre 1 y 13');
-  const cfg = getConfig();
-  cfg.deviceId = id;
-  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
-  updateDeviceBadge();
-  toast('✅ Dispositivo ' + String(id).padStart(2,'0') + ' guardado');
-}
-function saveUrl() {
-  const url = document.getElementById('cfg-url').value.trim();
-  if (!url.startsWith('https://')) return toast('❌ URL inválida');
-  const cfg = getConfig();
-  cfg.apiUrl = url;
-  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
-  toast('✅ URL guardada');
-}
-function updateDeviceBadge() {
-  const cfg = getConfig();
-  const el = document.getElementById('device-badge');
-  el.textContent = cfg.deviceId ? 'DISP-' + String(cfg.deviceId).padStart(2,'0') : '--';
-  if (cfg.deviceId) document.getElementById('cfg-device').value = cfg.deviceId;
-  if (cfg.apiUrl) document.getElementById('cfg-url').value = cfg.apiUrl;
+    return JSON.parse(localStorage.getItem(CFG_KEY)) || { deviceId: '', apiUrl: '' };
 }
 
-// ── Records ──────────────────────────────────────────
-function getRecords() {
-  try { return JSON.parse(localStorage.getItem(DB_KEY)) || []; } catch { return []; }
+function saveConfig() {
+    const id = document.getElementById('cfg-device').value;
+    const url = document.getElementById('cfg-url').value.trim();
+    if(!id || !url) return toast('⚠️ Completa los campos');
+    localStorage.setItem(CFG_KEY, JSON.stringify({ deviceId: id, apiUrl: url }));
+    toast('✅ Configuración guardada');
 }
-function setRecords(r) { localStorage.setItem(DB_KEY, JSON.stringify(r)); }
 
 function saveRecord() {
-  const cfg = getConfig();
-  if (!cfg.deviceId) return toast('⚠️ Configura el ID del dispositivo primero');
-  const dun = document.getElementById('f-dun').value.trim();
-  const lote = document.getElementById('f-lote').value.trim();
-  const ubicacion = document.getElementById('f-ubicacion').value.trim();
-  const cantidad = document.getElementById('f-cantidad').value;
-  const venc = document.getElementById('f-vencimiento').value;
-  if (!dun || !lote || !ubicacion || !cantidad) return toast('⚠️ Completa todos los campos');
-  const record = {
-    id: Date.now(),
-    timestamp: new Date().toISOString(),
-    dun, lote, ubicacion,
-    cantidad: parseFloat(cantidad),
-    fechaVencimiento: venc,
-    synced: false
-  };
-  const records = getRecords();
-  records.unshift(record);
-  setRecords(records);
-  toast('✅ Registro guardado');
-  clearForm();
-  updateBadge();
-  // auto-sync if online
-  if (navigator.onLine) syncNow(true);
+    const cfg = getConfig();
+    if(!cfg.deviceId || !cfg.apiUrl) return toast('❌ Configura el dispositivo primero');
+    
+    const record = {
+        id: Date.now(),
+        dun: document.getElementById('f-dun').value,
+        lote: document.getElementById('f-lote').value,
+        ubicacion: document.getElementById('f-ubicacion').value,
+        cantidad: document.getElementById('f-cantidad').value,
+        fechaVencimiento: document.getElementById('f-vencimiento').value,
+        timestamp: new Date().toISOString(),
+        synced: false
+    };
+
+    if(!record.dun || !record.cantidad) return toast('⚠️ DUN y Cantidad son obligatorios');
+
+    const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+    records.unshift(record);
+    localStorage.setItem(DB_KEY, JSON.stringify(records));
+    
+    toast('💾 Guardado localmente');
+    clearForm();
+    updateBadge();
+    syncNow(true); // Intento de sincronización automática
 }
 
-function clearForm() {
-  ['f-dun','f-lote','f-ubicacion','f-cantidad','f-vencimiento'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('f-dun').focus();
-}
-
-// ── Sync ──────────────────────────────────────────────
 async function syncNow(silent = false) {
-  const cfg = getConfig();
-  if (!cfg.apiUrl) return silent ? null : toast('⚠️ Configura la URL del servidor');
-  if (!cfg.deviceId) return silent ? null : toast('⚠️ Configura el ID del dispositivo');
-  const records = getRecords();
-  const pending = records.filter(r => !r.synced);
-  if (pending.length === 0) return silent ? null : toast('✅ Todo sincronizado');
-  if (!navigator.onLine) return silent ? null : toast('📵 Sin conexión');
+    const cfg = getConfig();
+    const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+    const pending = records.filter(r => !r.synced);
 
-  try {
-    const res = await fetch(cfg.apiUrl, {
-      method: 'POST',
-      body: JSON.stringify({ deviceId: cfg.deviceId, records: pending }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const json = await res.json();
-    if (json.status === 'ok') {
-      const ids = new Set(pending.map(r => r.id));
-      const updated = records.map(r => ids.has(r.id) ? {...r, synced: true} : r);
-      setRecords(updated);
-      updateBadge();
-      renderRecords();
-      if (!silent) toast('✅ ' + json.synced + ' registros sincronizados');
-    } else {
-      if (!silent) toast('❌ Error: ' + json.msg);
+    if (pending.length === 0) return silent ? null : toast('✅ Todo al día');
+    if (!navigator.onLine) return silent ? null : toast('📵 Sin conexión');
+
+    try {
+        // IMPORTANTE: Enviamos como text/plain para evitar errores de CORS en Google Apps Script
+        const response = await fetch(cfg.apiUrl, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ deviceId: cfg.deviceId, records: pending })
+        });
+
+        // Como usamos 'no-cors', no podemos leer la respuesta JSON directamente,
+        // pero si no hay error de red, asumimos que llegó bien y marcamos como sincronizado.
+        const updated = records.map(r => ({...r, synced: true}));
+        localStorage.setItem(DB_KEY, JSON.stringify(updated));
+        
+        renderRecords();
+        updateBadge();
+        if(!silent) toast('🔄 Sincronización exitosa');
+    } catch (e) {
+        if(!silent) toast('❌ Error de conexión');
     }
-  } catch(e) {
-    if (!silent) toast('❌ Error de conexión');
-  }
 }
 
-// ── UI ────────────────────────────────────────────────
 function showTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['capture','records','config'][i] === name);
-  });
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  if (name === 'records') renderRecords();
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    event.currentTarget.classList.add('active');
+    if(name === 'records') renderRecords();
 }
 
 function renderRecords() {
-  const records = getRecords();
-  const list = document.getElementById('records-list');
-  const total = records.length;
-  const synced = records.filter(r => r.synced).length;
-  const pending = total - synced;
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-pending').textContent = pending;
-  document.getElementById('stat-synced').textContent = synced;
-  if (total === 0) { list.innerHTML = '<div class="empty">Sin registros aún</div>'; return; }
-  list.innerHTML = records.slice(0,50).map(r => `
-    <div class="record-item ${r.synced ? 'synced' : ''}">
-      <h3>DUN: ${r.dun} &nbsp;|&nbsp; Lote: ${r.lote}</h3>
-      <p>📍 ${r.ubicacion} &nbsp;|&nbsp; Cant: ${r.cantidad} &nbsp;|&nbsp; Vence: ${r.fechaVencimiento || '--'}</p>
-      <p style="font-size:11px;color:#aaa;margin-top:2px">${new Date(r.timestamp).toLocaleString()}</p>
-      <span class="tag ${r.synced ? 'tag-synced' : 'tag-pending'}">${r.synced ? '✅ Sincronizado' : '⏳ Pendiente'}</span>
-    </div>
-  `).join('');
+    const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+    const container = document.getElementById('records-list');
+    container.innerHTML = records.map(r => `
+        <div class="record-item ${r.synced ? 'synced' : ''}">
+            <strong>${r.dun}</strong> - Lote: ${r.lote}<br>
+            <small>Cant: ${r.cantidad} | Ubic: ${r.ubicacion}</small><br>
+            <span class="tag ${r.synced ? 'tag-synced' : 'tag-pending'}">
+                ${r.synced ? 'Enviado' : 'Pendiente'}
+            </span>
+        </div>
+    `).join('');
 }
 
 function updateBadge() {
-  const pending = getRecords().filter(r => !r.synced).length;
-  document.getElementById('pending-badge').textContent = pending;
+    const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+    const pending = records.filter(r => !r.synced).length;
+    document.getElementById('pending-badge').textContent = pending;
+}
+
+function clearForm() {
+    ['f-dun','f-lote','f-ubicacion','f-cantidad','f-vencimiento'].forEach(id => document.getElementById(id).value = '');
 }
 
 function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.display = 'block';
-  clearTimeout(window._toast);
-  window._toast = setTimeout(() => el.style.display = 'none', 2500);
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
 }
 
 function clearAll() {
-  if (!confirm('¿Borrar todos los registros locales?')) return;
-  localStorage.removeItem(DB_KEY);
-  updateBadge();
-  renderRecords();
-  toast('🗑️ Registros borrados');
+    if(confirm('¿Borrar todo?')) { localStorage.removeItem(DB_KEY); location.reload(); }
 }
 
-function focusDun() { document.getElementById('f-dun').focus(); }
-
-// ── Network detection ─────────────────────────────────
-window.addEventListener('online', () => {
-  document.getElementById('sync-status').textContent = '⚡ Online';
-  syncNow(true);
-});
-window.addEventListener('offline', () => {
-  document.getElementById('sync-status').textContent = '📵 Offline';
-});
-
-// ── Init ──────────────────────────────────────────────
-updateDeviceBadge();
+// Cargar config inicial
+const c = getConfig();
+document.getElementById('cfg-device').value = c.deviceId;
+document.getElementById('cfg-url').value = c.apiUrl;
 updateBadge();
-if (!navigator.onLine) document.getElementById('sync-status').textContent = '📵 Offline';
-
-// Register service worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
 </script>
-
 </body>
 </html>

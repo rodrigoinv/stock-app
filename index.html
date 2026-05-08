@@ -23,7 +23,6 @@
         .btn-primary{background:#1a73e8;color:#fff}
         .btn-success{background:#34a853;color:#fff}
         .btn-danger{background:#ea4335;color:#fff}
-        .btn-outline{background:#fff;color:#1a73e8;border:2px solid #1a73e8}
         .badge{display:inline-block;background:#ea4335;color:#fff;border-radius:20px;padding:2px 8px;font-size:11px;margin-left:6px}
         .record-item{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-left:4px solid #1a73e8}
         .record-item.synced{border-left-color:#34a853}
@@ -51,9 +50,7 @@
 <div id="screen-capture" class="screen active">
     <div class="card">
         <label>DUN / Código</label>
-        <div class="dun-row">
-            <input type="text" id="f-dun" placeholder="Escanea o escribe DUN">
-        </div>
+        <input type="text" id="f-dun" placeholder="Escanea o escribe DUN">
         <label>Lote</label>
         <input type="text" id="f-lote" placeholder="Número de lote">
         <label>Ubicación</label>
@@ -125,36 +122,48 @@ function saveRecord() {
     toast('💾 Guardado localmente');
     clearForm();
     updateBadge();
-    syncNow(true); // Intento de sincronización automática
+    syncNow(true); 
 }
 
 async function syncNow(silent = false) {
     const cfg = getConfig();
-    const records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+    let records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
     const pending = records.filter(r => !r.synced);
 
     if (pending.length === 0) return silent ? null : toast('✅ Todo al día');
     if (!navigator.onLine) return silent ? null : toast('📵 Sin conexión');
 
     try {
-        // IMPORTANTE: Enviamos como text/plain para evitar errores de CORS en Google Apps Script
+        // Enviar datos como POST simple
         const response = await fetch(cfg.apiUrl, {
             method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ deviceId: cfg.deviceId, records: pending })
+            mode: 'cors', // Cambiado a cors
+            body: JSON.stringify({ 
+                deviceId: cfg.deviceId, 
+                records: pending 
+            })
         });
 
-        // Como usamos 'no-cors', no podemos leer la respuesta JSON directamente,
-        // pero si no hay error de red, asumimos que llegó bien y marcamos como sincronizado.
-        const updated = records.map(r => ({...r, synced: true}));
-        localStorage.setItem(DB_KEY, JSON.stringify(updated));
-        
-        renderRecords();
-        updateBadge();
-        if(!silent) toast('🔄 Sincronización exitosa');
+        const resData = await response.json();
+
+        if (resData.status === "ok") {
+            // Marcar como sincronizados solo los que enviamos
+            const syncedIds = pending.map(p => p.id);
+            records = records.map(r => {
+                if (syncedIds.includes(r.id)) r.synced = true;
+                return r;
+            });
+            
+            localStorage.setItem(DB_KEY, JSON.stringify(records));
+            renderRecords();
+            updateBadge();
+            if(!silent) toast('🔄 Sincronización exitosa');
+        } else {
+            throw new Error(resData.msg);
+        }
     } catch (e) {
-        if(!silent) toast('❌ Error de conexión');
+        console.error("Error de Sincronización:", e);
+        if(!silent) toast('❌ Error: ' + e.message);
     }
 }
 

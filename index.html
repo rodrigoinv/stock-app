@@ -19,7 +19,8 @@
         .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
         label{display:block;font-size:13px;color:#555;margin-bottom:4px;margin-top:12px}
         input,select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px}
-        .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:16px}
+        .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:16px;transition: opacity 0.3s}
+        .btn:disabled{opacity: 0.5; cursor: not-allowed}
         .btn-primary{background:#1a73e8;color:#fff}
         .btn-success{background:#34a853;color:#fff}
         .btn-danger{background:#ea4335;color:#fff}
@@ -30,8 +31,6 @@
         .tag-pending{background:#fff3e0;color:#e65100}
         .tag-synced{background:#e8f5e9;color:#2e7d32}
         #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;display:none;z-index:999}
-        .dun-row{display:flex;gap:8px}
-        .dun-row input{flex:1}
     </style>
 </head>
 <body>
@@ -47,27 +46,35 @@
     <div class="tab" onclick="showTab('config')">Config</div>
 </div>
 
+<!-- PANTALLA DE CAPTURA -->
 <div id="screen-capture" class="screen active">
     <div class="card">
         <label>DUN / Código</label>
         <input type="text" id="f-dun" placeholder="Escanea o escribe DUN">
+        
         <label>Lote</label>
         <input type="text" id="f-lote" placeholder="Número de lote">
+        
         <label>Ubicación</label>
         <input type="text" id="f-ubicacion" placeholder="Ej: A-12-3">
+        
         <label>Cantidad</label>
         <input type="number" id="f-cantidad" placeholder="0">
-        <label>Fecha de Vencimiento</label>
-        <input type="date" id="f-vencimiento">
-        <button class="btn btn-success" onclick="saveRecord()">💾 Guardar Registro</button>
+        
+        <label>Fecha de Vencimiento (DD/MM/AAAA)</label>
+        <input type="text" id="f-vencimiento" placeholder="Ej: 31/12/2026" maxlength="10">
+        
+        <button class="btn btn-success" id="btn-save" onclick="saveRecord()">💾 Guardar Registro</button>
     </div>
 </div>
 
+<!-- PANTALLA DE REGISTROS -->
 <div id="screen-records" class="screen">
-    <button class="btn btn-primary" onclick="syncNow()">🔄 Sincronizar Ahora</button>
+    <button class="btn btn-primary" id="btn-sync" onclick="syncNow()">🔄 Sincronizar Ahora</button>
     <div id="records-list" style="margin-top:15px"></div>
 </div>
 
+<!-- PANTALLA DE CONFIGURACIÓN -->
 <div id="screen-config" class="screen">
     <div class="card">
         <h3>⚙️ Configuración</h3>
@@ -85,6 +92,15 @@
 <script>
 const DB_KEY = 'stock_records_v1';
 const CFG_KEY = 'stock_config_v1';
+let isSyncing = false; 
+
+// Formatear automáticamente la fecha mientras se escribe (añade las /)
+document.getElementById('f-vencimiento').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+    if (v.length >= 5) v = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4);
+    else if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2);
+    e.target.value = v;
+});
 
 function getConfig() {
     return JSON.parse(localStorage.getItem(CFG_KEY)) || { deviceId: '', apiUrl: '' };
@@ -103,7 +119,7 @@ function saveRecord() {
     if(!cfg.deviceId || !cfg.apiUrl) return toast('❌ Configura el dispositivo primero');
     
     const record = {
-        id: Date.now(),
+        id: Date.now(), // ID Único para evitar duplicados en el Excel
         dun: document.getElementById('f-dun').value,
         lote: document.getElementById('f-lote').value,
         ubicacion: document.getElementById('f-ubicacion').value,
@@ -126,6 +142,8 @@ function saveRecord() {
 }
 
 async function syncNow(silent = false) {
+    if (isSyncing) return; 
+
     const cfg = getConfig();
     let records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
     const pending = records.filter(r => !r.synced);
@@ -133,11 +151,16 @@ async function syncNow(silent = false) {
     if (pending.length === 0) return silent ? null : toast('✅ Todo al día');
     if (!navigator.onLine) return silent ? null : toast('📵 Sin conexión');
 
+    const btnSync = document.getElementById('btn-sync');
+
     try {
-        // Enviar datos como POST simple
+        isSyncing = true;
+        if(btnSync) btnSync.disabled = true;
+        if(!silent) toast('⏳ Sincronizando...');
+
         const response = await fetch(cfg.apiUrl, {
             method: 'POST',
-            mode: 'cors', // Cambiado a cors
+            mode: 'cors',
             body: JSON.stringify({ 
                 deviceId: cfg.deviceId, 
                 records: pending 
@@ -147,14 +170,19 @@ async function syncNow(silent = false) {
         const resData = await response.json();
 
         if (resData.status === "ok") {
-            // Marcar como sincronizados solo los que enviamos
             const syncedIds = pending.map(p => p.id);
+            
             records = records.map(r => {
                 if (syncedIds.includes(r.id)) r.synced = true;
                 return r;
             });
+
+            // Limpieza: Mantener solo registros de las últimas 24h para no saturar memoria
+            const unDiaatras = Date.now() - (24 * 60 * 60 * 1000);
+            const filteredRecords = records.filter(r => !r.synced || r.id > unDiaatras);
             
-            localStorage.setItem(DB_KEY, JSON.stringify(records));
+            localStorage.setItem(DB_KEY, JSON.stringify(filteredRecords));
+            
             renderRecords();
             updateBadge();
             if(!silent) toast('🔄 Sincronización exitosa');
@@ -162,8 +190,11 @@ async function syncNow(silent = false) {
             throw new Error(resData.msg);
         }
     } catch (e) {
-        console.error("Error de Sincronización:", e);
-        if(!silent) toast('❌ Error: ' + e.message);
+        console.error("Error:", e);
+        if(!silent) toast('❌ Error: Revisa la URL o conexión');
+    } finally {
+        isSyncing = false;
+        if(btnSync) btnSync.disabled = false;
     }
 }
 
@@ -196,24 +227,31 @@ function updateBadge() {
 }
 
 function clearForm() {
-    ['f-dun','f-lote','f-ubicacion','f-cantidad','f-vencimiento'].forEach(id => document.getElementById(id).value = '');
+    ['f-dun','f-lote','f-ubicacion','f-cantidad','f-vencimiento'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
 }
 
 function toast(msg) {
     const t = document.getElementById('toast');
-    t.textContent = msg; t.style.display = 'block';
+    t.textContent = msg; 
+    t.style.display = 'block';
     setTimeout(() => t.style.display = 'none', 3000);
 }
 
 function clearAll() {
-    if(confirm('¿Borrar todo?')) { localStorage.removeItem(DB_KEY); location.reload(); }
+    if(confirm('¿Borrar todos los datos locales?')) { 
+        localStorage.removeItem(DB_KEY); 
+        location.reload(); 
+    }
 }
 
-// Cargar config inicial
-const c = getConfig();
-document.getElementById('cfg-device').value = c.deviceId;
-document.getElementById('cfg-url').value = c.apiUrl;
-updateBadge();
+window.onload = () => {
+    const c = getConfig();
+    if(c.deviceId) document.getElementById('cfg-device').value = c.deviceId;
+    if(c.apiUrl) document.getElementById('cfg-url').value = c.apiUrl;
+    updateBadge();
+};
 </script>
 </body>
 </html>

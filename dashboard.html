@@ -128,6 +128,9 @@ function analyze() {
     const lote     = b['Lote']        || '';
     const ubic     = String(b['Ubicacion'] || '').trim();
     const cantBase = parseFloat(b['Cantidad'] || 0);
+    // Ignorar filas con DUN vacío o "Vacia"
+    const dunLow = dun.toLowerCase();
+    if (!dun || dunLow === 'vacia' || dunLow === 'vacía' || dunLow === 'vacio') return;
 
     if (!dun && !ubic) return;
     const key = dun + '||' + ubic;

@@ -4,7 +4,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1a73e8">
 <title>Dashboard Inventario</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -14,21 +13,35 @@ header h1{font-size:17px}
 #last-update{font-size:11px;opacity:.8}
 .toolbar{background:#fff;padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #e0e0e0;position:sticky;top:48px;z-index:99}
 .toolbar select{padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;flex:1;min-width:130px}
-.btn-refresh{background:#1a73e8;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn{border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;font-weight:bold}
+.btn-blue{background:#1a73e8;color:#fff}
+.btn-green{background:#34a853;color:#fff}
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px}
-.kpi{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center}
-.kpi .num{font-size:32px;font-weight:bold}
+.kpi{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center;cursor:pointer;transition:transform .15s}
+.kpi:hover{transform:scale(1.03)}
+.kpi .num{font-size:30px;font-weight:bold}
 .kpi .lbl{font-size:12px;color:#888;margin-top:2px}
 .kpi.ok .num{color:#34a853}
 .kpi.warn .num{color:#fbbc04}
 .kpi.err .num{color:#ea4335}
 .kpi.info .num{color:#1a73e8}
 .kpi.purple .num{color:#9c27b0}
+.kpi.active-filter{box-shadow:0 0 0 3px #1a73e8}
+/* Progreso circular */
+.progress-wrap{display:flex;justify-content:center;padding:10px 0 4px}
+.prog-circle{position:relative;width:110px;height:110px}
+.prog-circle svg{transform:rotate(-90deg)}
+.prog-circle .bg{fill:none;stroke:#e0e0e0;stroke-width:10}
+.prog-circle .fill{fill:none;stroke:#34a853;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .6s}
+.prog-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.prog-label .pct{font-size:22px;font-weight:bold;color:#34a853}
+.prog-label .sub{font-size:10px;color:#888}
 section{padding:0 14px 6px}
-section h2{font-size:14px;font-weight:bold;color:#333;margin:10px 0 8px}
+section h2{font-size:14px;font-weight:bold;color:#333;margin:10px 0 8px;display:flex;align-items:center;justify-content:space-between}
 .bar-wrap{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
-.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.bar-label{width:85px;font-size:12px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer}
+.bar-row:hover .bar-label{color:#1a73e8}
+.bar-label{width:90px;font-size:12px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-bg{flex:1;background:#f0f0f0;border-radius:6px;height:18px;overflow:hidden}
 .bar-fill{height:100%;border-radius:6px;transition:width .4s}
 .bar-pct{width:34px;font-size:11px;text-align:right;color:#555}
@@ -44,6 +57,16 @@ tr:last-child td{border-bottom:none}
 .tag-extra{background:#e8eaf6;color:#283593}
 .loading{text-align:center;padding:50px 20px;color:#aaa;font-size:15px}
 .empty-msg{text-align:center;padding:20px;color:#34a853;font-size:13px}
+.export-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+/* Modal para filtro */
+.modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200}
+.modal-bg.open{display:flex;align-items:flex-start;justify-content:center;padding-top:60px}
+.modal{background:#fff;border-radius:14px;width:95%;max-width:900px;max-height:80vh;display:flex;flex-direction:column}
+.modal-header{padding:14px 16px;background:#1a73e8;color:#fff;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:15px}
+.modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+.modal-body{overflow:auto;padding:14px}
+.modal-footer{padding:12px 16px;border-top:1px solid #eee;display:flex;gap:8px;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -57,206 +80,230 @@ tr:last-child td{border-bottom:none}
   <select id="filter-device" onchange="render()">
     <option value="all">Todos los dispositivos</option>
   </select>
-  <select id="filter-status" onchange="render()">
-    <option value="all">Todos los estados</option>
-    <option value="ok">✅ OK</option>
-    <option value="diff">⚠️ Diferencia</option>
-    <option value="miss">❌ No capturada</option>
-    <option value="extra">➕ Extra</option>
-  </select>
-  <button class="btn-refresh" onclick="loadData()">🔄 Actualizar</button>
+  <button class="btn btn-blue" onclick="loadData()">🔄 Actualizar</button>
 </div>
 
 <div id="content"><div class="loading">⏳ Conectando con Google Sheets...</div></div>
 
-<script>
-const API = 'https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec';
+<!-- MODAL FILTRO -->
 
-let baseData = [], captureData = [], analysis = [];
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Detalle</h3>
+      <button class="modal-close" onclick="closeModalDirect()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="export-row">
+        <button class="btn btn-green" onclick="exportModal()">📥 Exportar Excel</button>
+      </div>
+      <div class="table-wrap" style="margin:0">
+        <table id="modal-table">
+          <tr><th>DUN</th><th>Ubicación</th><th>Estado</th><th>BASE</th><th>Capturado</th><th>Dif.</th><th>Disp.</th></tr>
+          <tbody id="modal-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec';
+var baseData = [], captureData = [], analysis = [];
+var modalData = [];
 
 async function loadData() {
   document.getElementById('content').innerHTML = '<div class="loading">⏳ Cargando datos...</div>';
   try {
-    const [bRes, cRes] = await Promise.all([
-      fetch(API + '?type=base'),
-      fetch(API + '?type=captures')
-    ]);
-    baseData  = await bRes.json();
-    captureData = await cRes.json();
+    var r1 = await fetch(API + '?type=base');
+    var r2 = await fetch(API + '?type=captures');
+    baseData = await r1.json();
+    captureData = await r2.json();
     document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString();
     buildDeviceFilter();
     render();
   } catch(err) {
-    document.getElementById('content').innerHTML =
-      '<div class="loading">❌ Error al conectar.<br><small>' + err.message + '</small></div>';
+    document.getElementById('content').innerHTML = '<div class="loading">❌ Error: ' + err.message + '</div>';
   }
 }
 
 function buildDeviceFilter() {
-  const devs = [...new Set(captureData.map(r => r.Dispositivo))].filter(Boolean).sort((a,b)=>a-b);
-  const sel = document.getElementById('filter-device');
+  var devs = [];
+  captureData.forEach(function(r){ if(r.Dispositivo && devs.indexOf(r.Dispositivo)===-1) devs.push(r.Dispositivo); });
+  devs.sort(function(a,b){return a-b;});
+  var sel = document.getElementById('filter-device');
   sel.innerHTML = '<option value="all">Todos los dispositivos</option>';
-  devs.forEach(d => {
-    const o = document.createElement('option');
-    o.value = d;
-    o.textContent = 'Dispositivo ' + String(d).padStart(2,'0');
+  devs.forEach(function(d){
+    var o = document.createElement('option');
+    o.value = d; o.textContent = 'Dispositivo ' + String(d).padStart(2,'0');
     sel.appendChild(o);
   });
 }
 
 function analyze() {
-  const devFilter = document.getElementById('filter-device').value;
-  const caps = devFilter === 'all'
-    ? captureData
-    : captureData.filter(r => String(r.Dispositivo) === String(devFilter));
+  var devFilter = document.getElementById('filter-device').value;
+  var caps = devFilter === 'all' ? captureData : captureData.filter(function(r){ return String(r.Dispositivo)===String(devFilter); });
 
-  // Agrupar capturas por DUN+Ubicacion, sumando cantidades
-  const capMap = {};
-  caps.forEach(r => {
-    const key = String(r.DUN).trim() + '||' + String(r.Ubicacion).trim();
-    if (!capMap[key]) capMap[key] = { dun: r.DUN, ubicacion: r.Ubicacion, cantidad: 0, dispositivos: new Set() };
-    capMap[key].cantidad += parseFloat(r.Cantidad) || 0;
-    capMap[key].dispositivos.add(r.Dispositivo);
+  var capMap = {};
+  caps.forEach(function(r) {
+    var key = String(r.DUN).trim() + '||' + String(r.Ubicacion).trim();
+    if (!capMap[key]) capMap[key] = {dun:r.DUN, ubicacion:r.Ubicacion, cantidad:0, dispositivos:[]};
+    capMap[key].cantidad += parseFloat(r.Cantidad)||0;
+    if (capMap[key].dispositivos.indexOf(r.Dispositivo)===-1) capMap[key].dispositivos.push(r.Dispositivo);
   });
 
   analysis = [];
-  const baseKeys = new Set();
+  var baseKeys = {};
 
-  baseData.forEach(b => {
-    const dun      = String(b['DUN']  || '').trim();
-    const desc     = b['Descripcion'] || '';
-    const lote     = b['Lote']        || '';
-    const ubic     = String(b['Ubicacion'] || '').trim();
-    const cantBase = parseFloat(b['Cantidad'] || 0);
-    // Ignorar filas con DUN vacío o "Vacia"
-    const dunLow = dun.toLowerCase();
-    if (!dun || dunLow === 'vacia' || dunLow === 'vacía' || dunLow === 'vacio') return;
-
+  baseData.forEach(function(b) {
+    var dun = String(b.DUN||'').trim();
+    var ubic = String(b.Ubicacion||'').trim();
+    var cantBase = parseFloat(b.Cantidad||0);
     if (!dun && !ubic) return;
-    const key = dun + '||' + ubic;
-    baseKeys.add(key);
-
-    const cap = capMap[key];
-    let status, diff = 0;
-    if (!cap) {
-      status = 'miss';
-    } else {
-      diff = cap.cantidad - cantBase;
-      status = diff === 0 ? 'ok' : 'diff';
-    }
-    analysis.push({
-      dun, desc, lote, ubicacion: ubic, cantBase,
-      cantCap: cap ? cap.cantidad : 0,
-      diff, status,
-      dispositivos: cap ? [...cap.dispositivos] : []
-    });
+    var key = dun + '||' + ubic;
+    baseKeys[key] = true;
+    var cap = capMap[key];
+    var status, diff = 0;
+    if (!cap) { status = 'miss'; }
+    else { diff = cap.cantidad - cantBase; status = diff===0 ? 'ok' : 'diff'; }
+    analysis.push({dun:dun, desc:b.Descripcion||'', ubicacion:ubic, cantBase:cantBase,
+      cantCap:cap?cap.cantidad:0, diff:diff, status:status, dispositivos:cap?cap.dispositivos:[]});
   });
 
-  // Extras: en capturas pero no en BASE
-  Object.keys(capMap).forEach(key => {
-    if (!baseKeys.has(key)) {
-      const c = capMap[key];
-      analysis.push({
-        dun: c.dun, desc: '—', lote: '—', ubicacion: c.ubicacion,
-        cantBase: 0, cantCap: c.cantidad, diff: c.cantidad,
-        status: 'extra', dispositivos: [...c.dispositivos]
-      });
+  Object.keys(capMap).forEach(function(key) {
+    if (!baseKeys[key]) {
+      var c = capMap[key];
+      analysis.push({dun:c.dun, desc:'—', ubicacion:c.ubicacion, cantBase:0,
+        cantCap:c.cantidad, diff:c.cantidad, status:'extra', dispositivos:c.dispositivos});
     }
   });
 }
 
 function render() {
   analyze();
-  const stFilter = document.getElementById('filter-status').value;
-  const filtered = stFilter === 'all' ? analysis : analysis.filter(r => r.status === stFilter);
+  var total = analysis.filter(function(r){return r.status!=='extra';}).length;
+  var ok    = analysis.filter(function(r){return r.status==='ok';}).length;
+  var diff  = analysis.filter(function(r){return r.status==='diff';}).length;
+  var miss  = analysis.filter(function(r){return r.status==='miss';}).length;
+  var extra = analysis.filter(function(r){return r.status==='extra';}).length;
+  var pct   = total>0 ? Math.round(ok/total*100) : 0;
+  var circ  = 283; // 2*PI*45
+  var offset = circ - (circ * pct / 100);
 
-  const total  = analysis.filter(r => r.status !== 'extra').length;
-  const ok     = analysis.filter(r => r.status === 'ok').length;
-  const diff   = analysis.filter(r => r.status === 'diff').length;
-  const miss   = analysis.filter(r => r.status === 'miss').length;
-  const extra  = analysis.filter(r => r.status === 'extra').length;
-  const pct    = total > 0 ? Math.round(ok / total * 100) : 0;
-
-  // Agrupar por ubicación para barras
-  const ubMap = {};
-  analysis.forEach(r => {
+  var ubMap = {};
+  analysis.forEach(function(r) {
     if (!ubMap[r.ubicacion]) ubMap[r.ubicacion] = {ok:0,diff:0,miss:0,extra:0,total:0};
     ubMap[r.ubicacion][r.status]++;
-    if (r.status !== 'extra') ubMap[r.ubicacion].total++;
+    if (r.status!=='extra') ubMap[r.ubicacion].total++;
   });
-  const ubList = Object.entries(ubMap)
-    .filter(([,s]) => s.total > 0)
-    .sort((a,b) => (a[1].ok/a[1].total) - (b[1].ok/b[1].total));
+  var ubList = Object.keys(ubMap).map(function(u){ return [u, ubMap[u]]; })
+    .filter(function(x){ return x[1].total>0; })
+    .sort(function(a,b){ return (a[1].ok/a[1].total)-(b[1].ok/b[1].total); });
 
-  // Ubicaciones a recontar
-  const recontar = analysis.filter(r => r.status === 'diff' || r.status === 'miss');
+  var recontar = analysis.filter(function(r){ return r.status==='diff'||r.status==='miss'; });
 
-  document.getElementById('content').innerHTML = `
-  <div class="kpis">
-    <div class="kpi info"><div class="num">${total}</div><div class="lbl">Total en BASE</div></div>
-    <div class="kpi ok"><div class="num">${pct}%</div><div class="lbl">Completado</div></div>
-    <div class="kpi ok"><div class="num">${ok}</div><div class="lbl">✅ OK</div></div>
-    <div class="kpi warn"><div class="num">${diff}</div><div class="lbl">⚠️ Diferencia</div></div>
-    <div class="kpi err"><div class="num">${miss}</div><div class="lbl">❌ No capturadas</div></div>
-    <div class="kpi purple"><div class="num">${extra}</div><div class="lbl">➕ Extras</div></div>
-  </div>
-
-  <section>
-    <h2>📍 Progreso por Ubicación</h2>
-    <div class="bar-wrap">
-      ${ubList.length === 0 ? '<div class="empty-msg">Sin datos</div>' :
-        ubList.map(([ub, s]) => {
-          const p = s.total > 0 ? Math.round(s.ok / s.total * 100) : 0;
-          const color = p === 100 ? '#34a853' : p === 0 ? '#ea4335' : '#fbbc04';
-          return `<div class="bar-row">
-            <div class="bar-label" title="${ub}">${ub}</div>
-            <div class="bar-bg"><div class="bar-fill" style="width:${p}%;background:${color}"></div></div>
-            <div class="bar-pct">${p}%</div>
-          </div>`;
-        }).join('')}
-    </div>
-
-    <h2>🔁 Ubicaciones a Recontar (${recontar.length})</h2>
-    <div class="table-wrap">
-      <table>
-        <tr><th>Ubicación</th><th>DUN</th><th>Motivo</th><th>BASE</th><th>Capturado</th></tr>
-        ${recontar.length === 0
-          ? '<tr><td colspan="5" class="empty-msg">✅ Sin diferencias</td></tr>'
-          : recontar.map(r => `<tr>
-              <td><b>${r.ubicacion}</b></td>
-              <td style="font-size:11px">${r.dun}</td>
-              <td>${tagHtml(r.status, r.diff)}</td>
-              <td>${r.cantBase}</td>
-              <td style="font-weight:bold;color:${r.diff < 0 ? '#ea4335' : r.diff > 0 ? '#1a73e8' : '#34a853'}">${r.cantCap}</td>
-            </tr>`).join('')}
-      </table>
-    </div>
-
-    <h2>📋 Detalle Completo (${filtered.length})</h2>
-    <div class="table-wrap">
-      <table>
-        <tr><th>DUN</th><th>Ubicación</th><th>Estado</th><th>Dif.</th><th>Disp.</th></tr>
-        ${filtered.length === 0
-          ? '<tr><td colspan="5" class="empty-msg">Sin registros</td></tr>'
-          : filtered.map(r => `<tr>
-              <td><b style="font-size:11px">${r.dun}</b><br><span style="color:#aaa;font-size:10px">${r.desc}</span></td>
-              <td style="font-size:11px">${r.ubicacion}</td>
-              <td>${tagHtml(r.status, r.diff)}</td>
-              <td style="font-weight:bold;color:${r.diff < 0 ? '#ea4335' : r.diff > 0 ? '#1a73e8' : '#34a853'}">${r.diff > 0 ? '+' : ''}${r.diff}</td>
-              <td style="font-size:11px">${r.dispositivos.join(', ') || '—'}</td>
-            </tr>`).join('')}
-      </table>
-    </div>
-  </section>`;
+  document.getElementById('content').innerHTML =
+  '<div class="progress-wrap">' +
+    '<div class="prog-circle">' +
+      '<svg width="110" height="110" viewBox="0 0 110 110">' +
+        '<circle class="bg" cx="55" cy="55" r="45"/>' +
+        '<circle class="fill" cx="55" cy="55" r="45" stroke-dasharray="'+circ+'" stroke-dashoffset="'+offset+'"/>' +
+      '</svg>' +
+      '<div class="prog-label"><div class="pct">'+pct+'%</div><div class="sub">Completado</div></div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="kpis">' +
+    '<div class="kpi info" onclick="openModal(\'all\',\'Todos los registros\')"><div class="num">'+total+'</div><div class="lbl">Total BASE</div></div>' +
+    '<div class="kpi ok" onclick="openModal(\'ok\',\'✅ OK\')"><div class="num">'+ok+'</div><div class="lbl">✅ OK</div></div>' +
+    '<div class="kpi warn" onclick="openModal(\'diff\',\'⚠️ Con Diferencia\')"><div class="num">'+diff+'</div><div class="lbl">⚠️ Diferencia</div></div>' +
+    '<div class="kpi err" onclick="openModal(\'miss\',\'❌ No Capturadas\')"><div class="num">'+miss+'</div><div class="lbl">❌ No capturadas</div></div>' +
+    '<div class="kpi purple" onclick="openModal(\'extra\',\'➕ Extras\')"><div class="num">'+extra+'</div><div class="lbl">➕ Extras</div></div>' +
+  '</div>' +
+  '<section>' +
+    '<h2>📍 Progreso por Ubicación' +
+      '<button class="btn btn-green" style="font-size:11px;padding:5px 10px" onclick="exportAll()">📥 Exportar todo</button>' +
+    '</h2>' +
+    '<div class="bar-wrap">' +
+      ubList.map(function(x){
+        var ub=x[0], s=x[1];
+        var p = s.total>0 ? Math.round(s.ok/s.total*100) : 0;
+        var col = p===100?'#34a853':p===0?'#ea4335':'#fbbc04';
+        return '<div class="bar-row" onclick="openModalUbic(\''+ub+'\')">' +
+          '<div class="bar-label" title="'+ub+'">'+ub+'</div>' +
+          '<div class="bar-bg"><div class="bar-fill" style="width:'+p+'%;background:'+col+'"></div></div>' +
+          '<div class="bar-pct">'+p+'%</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<h2>🔁 A Recontar ('+recontar.length+')<button class="btn btn-green" style="font-size:11px;padding:5px 10px" onclick="openModal(\'recontar\',\'🔁 Ubicaciones a Recontar\')">Ver detalle</button></h2>' +
+  '</section>';
 }
 
-function tagHtml(s, diff) {
-  if (s === 'ok')    return '<span class="tag tag-ok">✅ OK</span>';
-  if (s === 'miss')  return '<span class="tag tag-miss">❌ No capturada</span>';
-  if (s === 'extra') return '<span class="tag tag-extra">➕ Extra</span>';
-  if (s === 'diff')  return `<span class="tag tag-diff">⚠️ ${diff > 0 ? '+' : ''}${diff}</span>`;
+function openModal(filter, title) {
+  var data;
+  if (filter==='all') data = analysis;
+  else if (filter==='recontar') data = analysis.filter(function(r){return r.status==='diff'||r.status==='miss';});
+  else data = analysis.filter(function(r){return r.status===filter;});
+  modalData = data;
+  document.getElementById('modal-title').textContent = title + ' (' + data.length + ')';
+  renderModalTable(data);
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function openModalUbic(ubic) {
+  var data = analysis.filter(function(r){return r.ubicacion===ubic;});
+  modalData = data;
+  document.getElementById('modal-title').textContent = '📍 ' + ubic + ' (' + data.length + ')';
+  renderModalTable(data);
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function renderModalTable(data) {
+  var tbody = document.getElementById('modal-body');
+  if (data.length===0) { tbody.innerHTML='<tr><td colspan="7" class="empty-msg">Sin registros</td></tr>'; return; }
+  tbody.innerHTML = data.map(function(r){
+    var dc = r.diff<0?'#ea4335':r.diff>0?'#1a73e8':'#34a853';
+    return '<tr>' +
+      '<td><b style="font-size:11px">'+r.dun+'</b><br><span style="color:#aaa;font-size:10px">'+r.desc+'</span></td>' +
+      '<td style="font-size:11px">'+r.ubicacion+'</td>' +
+      '<td>'+tagHtml(r.status,r.diff)+'</td>' +
+      '<td>'+r.cantBase+'</td>' +
+      '<td style="font-weight:bold;color:'+dc+'">'+r.cantCap+'</td>' +
+      '<td style="font-weight:bold;color:'+dc+'">'+(r.diff>0?'+':'')+r.diff+'</td>' +
+      '<td style="font-size:11px">'+r.dispositivos.join(', ')+'</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function closeModal(e) { if(e.target===document.getElementById('modal-bg')) closeModalDirect(); }
+function closeModalDirect() { document.getElementById('modal-bg').classList.remove('open'); }
+
+function tagHtml(s,diff) {
+  if(s==='ok')    return '<span class="tag tag-ok">✅ OK</span>';
+  if(s==='miss')  return '<span class="tag tag-miss">❌ No capturada</span>';
+  if(s==='extra') return '<span class="tag tag-extra">➕ Extra</span>';
+  if(s==='diff')  return '<span class="tag tag-diff">⚠️ '+(diff>0?'+':'')+diff+'</span>';
   return s;
 }
+
+function statusLabel(s) {
+  if(s==='ok') return 'OK'; if(s==='miss') return 'No capturada';
+  if(s==='extra') return 'Extra'; if(s==='diff') return 'Diferencia'; return s;
+}
+
+function exportToCSV(data, filename) {
+  var rows = [['DUN','Descripcion','Ubicacion','Estado','BASE','Capturado','Diferencia','Dispositivos']];
+  data.forEach(function(r){
+    rows.push([r.dun, r.desc, r.ubicacion, statusLabel(r.status), r.cantBase, r.cantCap, r.diff, r.dispositivos.join('|')]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = filename + '.csv'; a.click();
+}
+
+function exportModal() { exportToCSV(modalData, 'inventario-filtrado'); }
+function exportAll()   { exportToCSV(analysis, 'inventario-completo'); }
 
 loadData();
 </script>

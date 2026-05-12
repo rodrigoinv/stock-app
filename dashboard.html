@@ -104,6 +104,7 @@
 </div>
 
 <script>
+// URL DE TU API (SCRIPT DE GOOGLE)
 var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec";
 var baseData = [], captureData = [], analysis = [], modalData = [];
 
@@ -142,10 +143,13 @@ function analyze() {
 
   var capMap = {};
   caps.forEach(function(r) {
-    var dunCheck = String(r.DUN).trim().toLowerCase();
-    if (!dunCheck || dunCheck === "vacia" || dunCheck === "vacio") return;
-    var key = String(r.DUN).trim() + "||" + String(r.Ubicacion).trim();
-    if (!capMap[key]) capMap[key] = {dun:r.DUN, ubicacion:r.Ubicacion, cantidad:0, dispositivos:[]};
+    var dunRaw = String(r.DUN || "").trim().toUpperCase();
+    // Normalizamos nombres de "VACIA"
+    if (dunRaw === "" || dunRaw === "VACIO") dunRaw = "VACIA";
+    
+    var key = dunRaw + "||" + String(r.Ubicacion).trim();
+    
+    if (!capMap[key]) capMap[key] = {dun:dunRaw, ubicacion:r.Ubicacion, cantidad:0, dispositivos:[]};
     capMap[key].cantidad += parseFloat(r.Cantidad)||0;
     if (capMap[key].dispositivos.indexOf(r.Dispositivo)===-1) capMap[key].dispositivos.push(r.Dispositivo);
   });
@@ -153,25 +157,54 @@ function analyze() {
   analysis = [];
   var baseKeys = {};
   baseData.forEach(function(b) {
-    var dun = String(b.DUN||"").trim();
+    var dun = String(b.DUN||"").trim().toUpperCase();
     var ubic = String(b.Ubicacion||"").trim();
     var cantBase = parseFloat(b.Cantidad||0);
-    if (!dun || !ubic) return;
+    if (!ubic) return;
+    
+    // Si la base está vacía, normalizamos a "VACIA" para el MATCH
+    if (!dun || dun === "VACIO") dun = "VACIA";
+
     var key = dun + "||" + ubic;
     baseKeys[key] = true;
     var cap = capMap[key];
     var diff = 0, status;
-    if (!cap) { status = "miss"; }
-    else { diff = cap.cantidad - cantBase; status = diff===0 ? "ok" : "diff"; }
-    analysis.push({dun:dun, desc:b.Descripcion||"", ubicacion:ubic, cantBase:cantBase,
-      cantCap:cap?cap.cantidad:0, diff:diff, status:status, dispositivos:cap?cap.dispositivos:[]});
+    
+    if (!cap) { 
+      status = "miss"; 
+    } else { 
+      diff = cap.cantidad - cantBase; 
+      status = (Math.abs(diff) < 0.01) ? "ok" : "diff"; 
+    }
+    
+    analysis.push({
+      dun: dun, 
+      desc: b.Descripcion||"", 
+      ubicacion: ubic, 
+      cantBase: cantBase,
+      cantCap: cap ? cap.cantidad : 0, 
+      diff: diff, 
+      status: status, 
+      dispositivos: cap ? cap.dispositivos : []
+    });
   });
 
   Object.keys(capMap).forEach(function(key) {
     if (!baseKeys[key]) {
       var c = capMap[key];
-      analysis.push({dun:c.dun, desc:"—", ubicacion:c.ubicacion, cantBase:0,
-        cantCap:c.cantidad, diff:c.cantidad, status:"extra", dispositivos:c.dispositivos});
+      // No mostramos "VACIA" como extra si no estaba en base
+      if (c.dun === "VACIA") return; 
+
+      analysis.push({
+        dun: c.dun, 
+        desc: "EXTRA", 
+        ubicacion: c.ubicacion, 
+        cantBase: 0,
+        cantCap: c.cantidad, 
+        diff: c.cantidad, 
+        status: "extra", 
+        dispositivos: c.dispositivos
+      });
     }
   });
 }

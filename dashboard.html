@@ -1,223 +1,142 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Inventario Segmentado</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:sans-serif;background:#f0f4f8;min-height:100vh;padding-bottom:40px}
-  header{background:#1a73e8;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:100}
-  header h1{font-size:17px}
-  #last-update{font-size:11px;opacity:.8}
-  .toolbar{background:#fff;padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #e0e0e0;position:sticky;top:48px;z-index:99}
-  .toolbar select{padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;flex:1;min-width:130px}
-  .btn{border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;font-weight:bold}
-  .btn-blue{background:#1a73e8;color:#fff}
-  .btn-green{background:#34a853;color:#fff}
-  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px}
-  .kpi{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center;cursor:pointer}
-  .kpi .num{font-size:30px;font-weight:bold}
-  .kpi .lbl{font-size:12px;color:#888}
-  .kpi.ok .num{color:#34a853}
-  .kpi.warn .num{color:#fbbc04}
-  .kpi.err .num{color:#ea4335}
-  .kpi.info .num{color:#1a73e8}
-  
-  /* Gráfico Circular */
-  .progress-wrap{display:flex;justify-content:center;padding:10px 0}
-  .prog-circle{position:relative;width:110px;height:110px}
-  .prog-circle svg{transform:rotate(-90deg)}
-  .prog-circle .bg{fill:none;stroke:#e0e0e0;stroke-width:10}
-  .prog-circle .fill{fill:none;stroke:#34a853;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .6s}
-  .prog-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-  .prog-label .pct{font-size:22px;font-weight:bold;color:#34a853}
-
-  /* NUEVA BARRA SEGMENTADA */
-  section{padding:0 14px}
-  .bar-container {
-    background:#fff; border-radius:12px; padding:20px; 
-    box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:14px;
-  }
-  .stacked-bar {
-    display: flex; height: 35px; width: 100%; 
-    background: #eee; border-radius: 8px; overflow: hidden; margin: 15px 0;
-  }
-  .segment { height: 100%; transition: width 0.6s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; overflow: hidden; white-space: nowrap; }
-  .seg-ok { background: #34a853; }
-  .seg-diff { background: #fbbc04; }
-  .seg-miss { background: #ea4335; }
-
-  .legend { display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-top: 5px; }
-  .legend-item { display: flex; align-items: center; gap: 4px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; }
-
-  .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:auto}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  th{background:#f8f9fa;padding:10px;text-align:left;color:#555;border-bottom:1px solid #eee}
-  td{padding:10px;border-bottom:1px solid #f5f5f5}
-  .tag{padding:3px 8px;border-radius:12px;font-size:10px;font-weight:bold}
-  .tag-ok{background:#e8f5e9;color:#2e7d32}
-  .tag-diff{background:#fff3e0;color:#e65100}
-  .tag-miss{background:#fce8e6;color:#c62828}
-
-  .modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200}
-  .modal-bg.open{display:flex;align-items:center;justify-content:center}
-  .modal{background:#fff;border-radius:14px;width:95%;max-width:900px;max-height:80vh;display:flex;flex-direction:column}
-  .modal-header{padding:15px;background:#1a73e8;color:#fff;display:flex;justify-content:space-between;border-radius:14px 14px 0 0}
-  .modal-body{overflow:auto;padding:15px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Inventario Segmentado</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:sans-serif;background:#f0f4f8;min-height:100vh;padding-bottom:40px}
+        header{background:#1a73e8;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+        header h1{font-size:17px}
+        .toolbar{background:#fff;padding:10px 14px;display:flex;gap:8px;border-bottom:1px solid #e0e0e0;position:sticky;top:48px;z-index:99}
+        .toolbar select{padding:7px 10px;border:1px solid #ddd;border-radius:8px;flex:1}
+        .btn{border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:bold;background:#1a73e8;color:#fff}
+        .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px}
+        .kpi{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center;cursor:pointer}
+        .kpi .num{font-size:28px;font-weight:bold}
+        .kpi .lbl{font-size:11px;color:#888;text-transform:uppercase}
+        .kpi.ok .num{color:#34a853}
+        .kpi.neg .num{color:#ea4335}
+        .kpi.pos .num{color:#fbbc04}
+        .kpi.miss .num{color:#1a73e8}
+        .bar-container {background:#fff; border-radius:12px; padding:20px; margin:0 14px 14px; box-shadow:0 1px 4px rgba(0,0,0,.08)}
+        .stacked-bar {display:flex; height:35px; width:100%; background:#eee; border-radius:8px; overflow:hidden; margin:15px 0}
+        .segment {height:100%; display:flex; align-items:center; justify-content:center; color:white; font-size:11px; font-weight:bold}
+        .modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+        .modal-bg.open{display:flex}
+        .modal{background:#fff;border-radius:14px;width:95%;max-width:900px;max-height:80vh;display:flex;flex-direction:column}
+        .modal-header{padding:15px;background:#1a73e8;color:#fff;display:flex;justify-content:space-between;border-radius:14px 14px 0 0}
+        .modal-body{overflow:auto;padding:15px}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th{background:#f8f9fa;padding:10px;text-align:left;border-bottom:1px solid #eee}
+        td{padding:10px;border-bottom:1px solid #f5f5f5}
+        .tag{padding:3px 8px;border-radius:12px;font-size:10px;font-weight:bold;color:#fff}
+    </style>
 </head>
 <body>
 
 <header>
-  <h1>📊 Dashboard Inventario Real-Time</h1>
-  <span id="last-update">—</span>
+    <h1>📊 Inventario Real-Time</h1>
+    <span id="last-update">—</span>
 </header>
 
 <div class="toolbar">
-  <select id="filter-device" onchange="render()">
-    <option value="all">Todos los dispositivos</option>
-  </select>
-  <button class="btn btn-blue" onclick="loadData()">🔄 Actualizar</button>
+    <select id="filter-device" onchange="render()"><option value="all">Todos los dispositivos</option></select>
+    <button class="btn" onclick="loadData()">🔄 Actualizar</button>
 </div>
 
 <div id="content"></div>
 
 <div class="modal-bg" id="modal-bg">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="modal-title">Detalle</h3>
-      <button style="background:none; border:none; color:white; font-size:20px; cursor:pointer" onclick="closeModal()">✕</button>
+    <div class="modal">
+        <div class="modal-header"><h3 id="modal-title">Detalle</h3><button onclick="closeModal()" style="color:white; background:none; border:none; font-size:20px">✕</button></div>
+        <div class="modal-body">
+            <table>
+                <thead><tr><th>DUN</th><th>Ubicación</th><th>Estado</th><th>Base</th><th>Cap.</th><th>Dif.</th></tr></thead>
+                <tbody id="modal-table-body"></tbody>
+            </table>
+        </div>
     </div>
-    <div class="modal-body">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>DUN</th><th>Ubicación</th><th>Estado</th><th>BASE</th><th>Captura</th><th>Dif.</th></tr></thead>
-          <tbody id="modal-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
-var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec";
-var baseData = [], captureData = [], analysis = [];
+    var API = "TU_URL_DE_APPS_SCRIPT";
+    var baseData = [], captureData = [], analysis = [];
 
-async function loadData() {
-  document.getElementById("content").innerHTML = "<div style='text-align:center;padding:50px'>⏳ Cargando datos...</div>";
-  try {
-    const [r1, r2] = await Promise.all([fetch(API+"?type=base"), fetch(API+"?type=captures")]);
-    baseData = await r1.json();
-    captureData = await r2.json();
-    document.getElementById("last-update").textContent = "Corte: " + new Date().toLocaleTimeString();
-    buildDeviceFilter();
-    render();
-  } catch(e) { document.getElementById("content").innerHTML = "❌ Error al cargar"; }
-}
+    async function loadData() {
+        try {
+            const [r1, r2] = await Promise.all([fetch(API+"?type=base"), fetch(API+"?type=captures")]);
+            baseData = await r1.json();
+            captureData = await r2.json();
+            document.getElementById("last-update").textContent = new Date().toLocaleTimeString();
+            render();
+        } catch(e) { console.error(e); }
+    }
 
-function buildDeviceFilter() {
-  const devs = [...new Set(captureData.map(r => r.Dispositivo))].sort((a,b)=>a-b);
-  const sel = document.getElementById("filter-device");
-  sel.innerHTML = "<option value='all'>Todos los dispositivos</option>";
-  devs.forEach(d => { if(d) sel.innerHTML += `<option value="${d}">Dispositivo ${String(d).padStart(2,'0')}</option>`; });
-}
+    function analyze() {
+        const devFilter = document.getElementById("filter-device").value;
+        const caps = devFilter === "all" ? captureData : captureData.filter(r => String(r.Dispositivo) === devFilter);
+        const capMap = {};
+        caps.forEach(r => {
+            const key = r.DUN + "||" + r.Ubicacion;
+            if(!capMap[key]) capMap[key] = 0;
+            capMap[key] += r.Cantidad;
+        });
 
-function analyze() {
-  const devFilter = document.getElementById("filter-device").value;
-  const caps = devFilter === "all" ? captureData : captureData.filter(r => String(r.Dispositivo) === devFilter);
-  
-  const capMap = {};
-  caps.forEach(r => {
-    let dun = String(r.DUN||"").trim().toUpperCase();
-    if(dun==="" || dun==="VACIO") dun = "VACIA";
-    const key = dun + "||" + String(r.Ubicacion).trim();
-    if(!capMap[key]) capMap[key] = {cant:0, devs:[]};
-    capMap[key].cant += parseFloat(r.Cantidad)||0;
-    if(!capMap[key].devs.includes(r.Dispositivo)) capMap[key].devs.push(r.Dispositivo);
-  });
+        analysis = baseData.map(b => {
+            const key = b.DUN + "||" + b.Ubicacion;
+            const cantCap = capMap[key] || 0;
+            const diff = cantCap - b.Cantidad;
+            let status = "miss";
+            if(capMap.hasOwnProperty(key)) {
+                if(Math.abs(diff) < 0.01) status = "ok";
+                else if(diff < 0) status = "neg";
+                else status = "pos";
+            }
+            return { ...b, cantCap, diff, status };
+        });
+    }
 
-  analysis = baseData.map(b => {
-    let dun = String(b.DUN||"").trim().toUpperCase();
-    if(!dun || dun==="VACIO") dun = "VACIA";
-    const ubic = String(b.Ubicacion).trim();
-    const key = dun + "||" + ubic;
-    const cap = capMap[key];
-    const cantBase = parseFloat(b.Cantidad)||0;
-    const cantCap = cap ? cap.cant : 0;
-    const diff = cantCap - cantBase;
-    const status = cap ? (Math.abs(diff) < 0.01 ? "ok" : "diff") : "miss";
-    return { dun, ubic, cantBase, cantCap, diff, status, desc: b.Descripcion };
-  });
-}
+    function render() {
+        analyze();
+        const total = analysis.length, 
+              ok = analysis.filter(r=>r.status==="ok").length,
+              neg = analysis.filter(r=>r.status==="neg").length,
+              pos = analysis.filter(r=>r.status==="pos").length,
+              miss = analysis.filter(r=>r.status==="miss").length;
 
-function render() {
-  analyze();
-  const total = analysis.length;
-  const ok = analysis.filter(r => r.status === "ok").length;
-  const diff = analysis.filter(r => r.status === "diff").length;
-  const miss = analysis.filter(r => r.status === "miss").length;
+        document.getElementById("content").innerHTML = `
+            <div class="kpis">
+                <div class="kpi ok" onclick="openModal('ok')"><div class="num">${ok}</div><div class="lbl">Correctos</div></div>
+                <div class="kpi neg" onclick="openModal('neg')"><div class="num">${neg}</div><div class="lbl">Faltantes (-)</div></div>
+                <div class="kpi pos" onclick="openModal('pos')"><div class="num">${pos}</div><div class="lbl">Sobrantes (+)</div></div>
+                <div class="kpi miss" onclick="openModal('miss')"><div class="num">${miss}</div><div class="lbl">Pendientes</div></div>
+            </div>
+            <div class="bar-container">
+                <div class="stacked-bar">
+                    <div class="segment" style="width:${(ok/total*100)}%; background:#34a853"></div>
+                    <div class="segment" style="width:${(neg/total*100)}%; background:#ea4335"></div>
+                    <div class="segment" style="width:${(pos/total*100)}%; background:#fbbc04"></div>
+                    <div class="segment" style="width:${(miss/total*100)}%; background:#1a73e8"></div>
+                </div>
+            </div>
+        `;
+    }
 
-  const pOk = ((ok/total)*100).toFixed(1);
-  const pDiff = ((diff/total)*100).toFixed(1);
-  const pMiss = ((miss/total)*100).toFixed(1);
-
-  document.getElementById("content").innerHTML = `
-    <div class="progress-wrap">
-      <div class="prog-circle">
-        <svg width="110" height="110" viewBox="0 0 110 110">
-          <circle class="bg" cx="55" cy="55" r="45"/>
-          <circle class="fill" cx="55" cy="55" r="45" stroke-dasharray="283" stroke-dashoffset="${283-(283*ok/total)}"/>
-        </svg>
-        <div class="prog-label"><div class="pct">${Math.round(ok/total*100)}%</div></div>
-      </div>
-    </div>
-
-    <div class="kpis">
-      <div class="kpi info" onclick="openModal('all')"><div class="num">${total}</div><div class="lbl">Total Base</div></div>
-      <div class="kpi ok" onclick="openModal('ok')"><div class="num">${ok}</div><div class="lbl">Correctos</div></div>
-      <div class="kpi warn" onclick="openModal('diff')"><div class="num">${diff}</div><div class="lbl">Diferencias</div></div>
-      <div class="kpi err" onclick="openModal('miss')"><div class="num">${miss}</div><div class="lbl">Pendientes</div></div>
-    </div>
-
-    <section>
-      <div class="bar-container">
-        <h2 style="font-size:14px; color:#333">Distribución del Inventario</h2>
-        <div class="stacked-bar">
-          <div class="segment seg-ok" style="width:${pOk}%">${ok > 0 ? pOk+'%' : ''}</div>
-          <div class="segment seg-diff" style="width:${pDiff}%">${diff > 0 ? pDiff+'%' : ''}</div>
-          <div class="segment seg-miss" style="width:${pMiss}%">${miss > 0 ? pMiss+'%' : ''}</div>
-        </div>
-        <div class="legend">
-          <div class="legend-item"><span class="dot seg-ok"></span> OK (${ok})</div>
-          <div class="legend-item"><span class="dot seg-diff"></span> Diferencia (${diff})</div>
-          <div class="legend-item"><span class="dot seg-miss"></span> Pendiente (${miss})</div>
-        </div>
-      </div>
-    </section>
-  `;
-}
-
-function openModal(filter) {
-  const data = filter === 'all' ? analysis : analysis.filter(r => r.status === filter);
-  document.getElementById("modal-title").textContent = "Detalle: " + filter.toUpperCase();
-  document.getElementById("modal-body").innerHTML = data.map(r => `
-    <tr>
-      <td>${r.dun}</td>
-      <td>${r.ubic}</td>
-      <td><span class="tag tag-${r.status}">${r.status.toUpperCase()}</span></td>
-      <td>${r.cantBase}</td>
-      <td>${r.cantCap}</td>
-      <td style="color:${r.diff<0?'red':'blue'}">${r.diff}</td>
-    </tr>
-  `).join("");
-  document.getElementById("modal-bg").classList.add("open");
-}
-
-function closeModal() { document.getElementById("modal-bg").classList.remove("open"); }
-
-loadData();
+    function openModal(filter) {
+        const data = analysis.filter(r => r.status === filter);
+        document.getElementById("modal-table-body").innerHTML = data.map(r => `
+            <tr>
+                <td>${r.DUN}</td><td>${r.Ubicacion}</td>
+                <td><span class="tag" style="background:${r.status==='neg'?'#ea4335':r.status==='pos'?'#fbbc04':'#34a853'}">${r.status.toUpperCase()}</span></td>
+                <td>${r.Cantidad}</td><td>${r.cantCap}</td><td style="color:${r.diff<0?'red':'green'}">${r.diff}</td>
+            </tr>
+        `).join("");
+        document.getElementById("modal-bg").classList.add("open");
+    }
+    function closeModal() { document.getElementById("modal-bg").classList.remove("open"); }
+    loadData();
 </script>
 </body>
 </html>

@@ -3,66 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calyco - Dashboard de Auditoría de Inventario</title>
+    <title>Calyco - Dashboard de Auditoría</title>
     <style>
-        :root {
-            --primary: #1a73e8;
-            --success: #34a853;
-            --danger: #ea4335;
-            --warning: #fbbc04;
-            --bg: #f8f9fa;
-        }
-
+        :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; --warning: #fbbc04; --bg: #f8f9fa; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: #3c4043; }
-        
-        header { background: var(--primary); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); sticky; top: 0; z-index: 100; }
-        #last-update { font-size: 13px; background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px; }
-
-        .toolbar { background: white; padding: 15px 30px; display: flex; gap: 15px; border-bottom: 1px solid #dadce0; position: sticky; top: 60px; z-index: 99; }
-        select { padding: 10px; border: 1px solid #dadce0; border-radius: 8px; flex: 1; outline: none; }
+        header { background: var(--primary); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .toolbar { background: white; padding: 15px 30px; display: flex; gap: 15px; border-bottom: 1px solid #dadce0; }
+        select { padding: 10px; border: 1px solid #dadce0; border-radius: 8px; flex: 1; }
         .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-
         .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; padding: 25px; }
-        .kpi { background: white; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: pointer; border-bottom: 6px solid transparent; transition: 0.2s; }
-        .kpi:hover { transform: translateY(-5px); }
-        .kpi .num { font-size: 38px; font-weight: bold; }
-        .kpi .lbl { font-size: 13px; color: #5f6368; text-transform: uppercase; margin-top: 5px; }
-        
+        .kpi { background: white; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: pointer; border-bottom: 6px solid transparent; }
         .kpi.ok { border-color: var(--success); } .kpi.ok .num { color: var(--success); }
         .kpi.neg { border-color: var(--danger); } .kpi.neg .num { color: var(--danger); }
         .kpi.pos { border-color: var(--warning); } .kpi.pos .num { color: var(--warning); }
         .kpi.miss { border-color: var(--primary); } .kpi.miss .num { color: var(--primary); }
-
-        .card { background: white; border-radius: 12px; padding: 25px; margin: 0 25px 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-        .progress-bar { display: flex; height: 35px; background: #e8eaed; border-radius: 8px; overflow: hidden; margin: 20px 0; }
-        .segment { height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
-
-        /* MODAL */
+        .num { font-size: 38px; font-weight: bold; }
         .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
         .modal-bg.active { display: flex; }
         .modal { background: white; border-radius: 15px; width: 95%; max-width: 1100px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
         .modal-header { padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { overflow: auto; padding: 0; }
-
         table { width: 100%; border-collapse: collapse; }
         th { background: #f8f9fa; padding: 15px; text-align: left; border-bottom: 2px solid #eee; position: sticky; top: 0; }
         td { padding: 15px; border-bottom: 1px solid #eee; }
-        .row-err { background: #fff5f5; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Calyco - Auditoría de Toma de Inventario</h1>
-    <span id="last-update">Sincronizando datos...</span>
+    <span id="last-update">Sincronizando...</span>
 </header>
 
 <div class="toolbar">
-    <select id="filter-device" onchange="render()">
-        <option value="all">Ver todos los dispositivos</option>
-    </select>
-    <button class="btn" onclick="loadData()">🔄 Sincronizar Sheets</button>
+    <select id="filter-device" onchange="render()"><option value="all">Todos los dispositivos</option></select>
+    <button class="btn" onclick="loadData()">🔄 Sincronizar Datos</button>
 </div>
 
 <div id="content"></div>
@@ -70,58 +45,38 @@
 <div class="modal-bg" id="modal-bg">
     <div class="modal">
         <div class="modal-header">
-            <h3 id="modal-title">Detalle de Ubicaciones</h3>
+            <h3 id="modal-title">Detalle</h3>
             <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
         </div>
-        <div class="modal-body">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Ubicación</th>
-                        <th>DUN Base</th>
-                        <th>DUN Captura</th>
-                        <th>Estado</th>
-                        <th>Base</th>
-                        <th>Captura</th>
-                        <th>Dif.</th>
-                    </tr>
-                </thead>
-                <tbody id="modal-table-body"></tbody>
-            </table>
-        </div>
+        <div style="overflow:auto;"><table id="modal-table">
+            <thead><tr><th>Ubicación</th><th>DUN Base</th><th>DUN Captura</th><th>Estado</th><th>Base</th><th>Captura</th><th>Dif.</th></tr></thead>
+            <tbody id="modal-table-body"></tbody>
+        </table></div>
     </div>
 </div>
 
 <script>
-    // REEMPLAZA ESTO CON TU URL DE APPS SCRIPT
-    var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec"; 
+    // CAMBIA ESTA URL POR LA TUYA
+    var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec";
     
     var baseData = [], captureData = [], analysis = [];
 
     async function loadData() {
-        const contentDiv = document.getElementById("content");
-        contentDiv.innerHTML = "<div style='text-align:center;padding:100px;'>Cargando información desde Google Sheets...</div>";
-        
+        document.getElementById("content").innerHTML = "<div style='text-align:center;padding:50px;'>Cargando...</div>";
         try {
-            const [r1, r2] = await Promise.all([
-                fetch(API + "?type=base"),
-                fetch(API + "?type=captures")
-            ]);
+            const [r1, r2] = await Promise.all([fetch(API + "?type=base"), fetch(API + "?type=captures")]);
             baseData = await r1.json();
             captureData = await r2.json();
-            
-            document.getElementById("last-update").textContent = "Último corte: " + new Date().toLocaleTimeString();
+            document.getElementById("last-update").textContent = "Corte: " + new Date().toLocaleTimeString();
             buildDeviceFilter();
             render();
-        } catch(e) {
-            contentDiv.innerHTML = "<div style='color:red;padding:100px;'>Error: No se pudo conectar con la API. Revise la URL.</div>";
-        }
+        } catch(e) { console.error(e); }
     }
 
     function buildDeviceFilter() {
         const devs = [...new Set(captureData.map(r => r.Dispositivo))].filter(Boolean).sort();
         const sel = document.getElementById("filter-device");
-        sel.innerHTML = "<option value='all'>Ver todos los dispositivos</option>";
+        sel.innerHTML = "<option value='all'>Todos los dispositivos</option>";
         devs.forEach(d => { sel.innerHTML += `<option value="${d}">Dispositivo ${d}</option>`; });
     }
 
@@ -139,9 +94,11 @@
 
         analysis = baseData.map(b => {
             const uKey = String(b.Ubicacion).trim().toUpperCase();
-            const dunBase = String(b.DUN).trim().toUpperCase();
-            // Lógica robusta para leer el 12 aunque Sheets lo envíe raro
-            const cantBase = parseFloat(String(b.Cantidad).replace(/[^0-9.-]+/g,"")) || 0;
+            const dunBase = String(b.DUN || "VACIA").trim().toUpperCase();
+            
+            // LÓGICA DE DETECCIÓN DE COLUMNA: Intentamos Cantidad, cantidad, CANTIDAD o la 4ta columna
+            let rawCant = b.Cantidad || b.cantidad || b.CANTIDAD || Object.values(b)[4]; 
+            const cantBase = parseFloat(String(rawCant).replace(/[^0-9.-]+/g,"")) || 0;
             
             const hasCapture = capMap.hasOwnProperty(uKey);
             const cantCap = hasCapture ? capMap[uKey].cant : 0;
@@ -150,52 +107,30 @@
             
             let status = "miss";
             if (hasCapture) {
-                // Si capturó "VACIA" pero había algo en base, es error negativo
-                if (dunBase !== "VACIA" && dunCap === "VACIA" && cantBase > 0) status = "neg";
+                // Si la base tiene unidades y el capturador dice VACIA -> NEGATIVO (-12)
+                if (cantBase > 0 && dunCap === "VACIA") status = "neg";
                 else if (dunBase !== "VACIA" && dunCap !== "VACIA" && dunBase !== dunCap) status = "neg";
                 else if (Math.abs(diff) < 0.01) status = "ok";
                 else status = diff < 0 ? "neg" : "pos";
             }
             
-            return { 
-                Ubicacion: uKey,
-                dunBase: dunBase,
-                dunCap: hasCapture ? capMap[uKey].duns.join(", ") : "---",
-                cantBase: cantBase,
-                cantCap: cantCap,
-                diff: diff,
-                status: status,
-                isError: hasCapture && dunBase !== "VACIA" && dunBase !== dunCap
-            };
+            return { Ubicacion: uKey, dunBase, dunCap, cantBase, cantCap, diff, status };
         });
     }
 
     function render() {
         analyze();
-        const stats = {
-            ok: analysis.filter(r => r.status === 'ok').length,
-            neg: analysis.filter(r => r.status === 'neg').length,
-            pos: analysis.filter(r => r.status === 'pos').length,
-            miss: analysis.filter(r => r.status === 'miss').length,
-            total: analysis.length
-        };
+        const ok = analysis.filter(r => r.status === 'ok').length;
+        const neg = analysis.filter(r => r.status === 'neg').length;
+        const pos = analysis.filter(r => r.status === 'pos').length;
+        const miss = analysis.filter(r => r.status === 'miss').length;
 
         document.getElementById("content").innerHTML = `
             <div class="kpis">
-                <div class="kpi ok" onclick="openModal('ok')"><div class="num">${stats.ok}</div><div class="lbl">OK (Sin Diferencia)</div></div>
-                <div class="kpi neg" onclick="openModal('neg')"><div class="num">${stats.neg}</div><div class="lbl">Diferencia (-) / Error</div></div>
-                <div class="kpi pos" onclick="openModal('pos')"><div class="num">${stats.pos}</div><div class="lbl">Sobrante (+)</div></div>
-                <div class="kpi miss" onclick="openModal('miss')"><div class="num">${stats.miss}</div><div class="lbl">Sin Capturar</div></div>
-            </div>
-            <div class="card">
-                <p><strong>Avance General del Inventario</strong></p>
-                <div class="progress-bar">
-                    <div class="segment" style="width:${(stats.ok/stats.total*100)}%; background:var(--success)">${stats.ok}</div>
-                    <div class="segment" style="width:${(stats.neg/stats.total*100)}%; background:var(--danger)">${stats.neg}</div>
-                    <div class="segment" style="width:${(stats.pos/stats.total*100)}%; background:var(--warning)">${stats.pos}</div>
-                    <div class="segment" style="width:${(stats.miss/stats.total*100)}%; background:var(--primary)">${stats.miss}</div>
-                </div>
-                <p style="font-size:14px; color:#666">ERI (Exactitud): <strong>${((stats.ok/stats.total)*100).toFixed(2)}%</strong></p>
+                <div class="kpi ok" onclick="openModal('ok')"><div class="num">${ok}</div><div class="lbl">OK</div></div>
+                <div class="kpi neg" onclick="openModal('neg')"><div class="num">${neg}</div><div class="lbl">Diferencias / Errores</div></div>
+                <div class="kpi pos" onclick="openModal('pos')"><div class="num">${pos}</div><div class="lbl">Sobrantes</div></div>
+                <div class="kpi miss" onclick="openModal('miss')"><div class="num">${miss}</div><div class="lbl">Sin Capturar</div></div>
             </div>
         `;
     }
@@ -203,14 +138,14 @@
     function openModal(f) {
         const data = analysis.filter(r => r.status === f);
         document.getElementById("modal-table-body").innerHTML = data.map(r => `
-            <tr class="${r.isError ? 'row-err' : ''}">
+            <tr>
                 <td><strong>${r.Ubicacion}</strong></td>
                 <td>${r.dunBase}</td>
-                <td>${r.dunCap} ${r.isError ? '⚠️' : ''}</td>
-                <td><span style="color:white; padding:3px 8px; border-radius:5px; background:${r.status==='ok'?'#34a853':r.status==='neg'?'#ea4335':'#fbbc04'}">${r.status.toUpperCase()}</span></td>
+                <td>${r.dunCap}</td>
+                <td><span style="color:white;padding:3px 8px;border-radius:5px;background:${r.status==='ok'?'#34a853':r.status==='neg'?'#ea4335':'#fbbc04'}">${r.status.toUpperCase()}</span></td>
                 <td>${r.cantBase}</td>
                 <td>${r.cantCap}</td>
-                <td style="font-weight:bold; color:${r.diff<0?'red':r.diff>0?'orange':'green'}">${r.diff}</td>
+                <td style="font-weight:bold;color:${r.diff<0?'red':r.diff>0?'orange':'green'}">${r.diff}</td>
             </tr>
         `).join("");
         document.getElementById("modal-bg").classList.add("active");

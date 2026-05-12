@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Inventario General</title>
+<title>Dashboard Inventario Segmentado</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:sans-serif;background:#f0f4f8;min-height:100vh;padding-bottom:40px}
@@ -16,52 +16,62 @@
   .btn-blue{background:#1a73e8;color:#fff}
   .btn-green{background:#34a853;color:#fff}
   .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px}
-  .kpi{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center;cursor:pointer;transition:transform .15s}
-  .kpi:hover{transform:scale(1.03)}
+  .kpi{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center;cursor:pointer}
   .kpi .num{font-size:30px;font-weight:bold}
-  .kpi .lbl{font-size:12px;color:#888;margin-top:2px}
+  .kpi .lbl{font-size:12px;color:#888}
   .kpi.ok .num{color:#34a853}
   .kpi.warn .num{color:#fbbc04}
   .kpi.err .num{color:#ea4335}
   .kpi.info .num{color:#1a73e8}
-  .kpi.purple .num{color:#9c27b0}
-  .progress-wrap{display:flex;justify-content:center;padding:10px 0 4px}
+  
+  /* Gráfico Circular */
+  .progress-wrap{display:flex;justify-content:center;padding:10px 0}
   .prog-circle{position:relative;width:110px;height:110px}
   .prog-circle svg{transform:rotate(-90deg)}
   .prog-circle .bg{fill:none;stroke:#e0e0e0;stroke-width:10}
   .prog-circle .fill{fill:none;stroke:#34a853;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .6s}
   .prog-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
   .prog-label .pct{font-size:22px;font-weight:bold;color:#34a853}
-  .prog-label .sub{font-size:10px;color:#888}
-  section{padding:0 14px 6px}
-  section h2{font-size:14px;font-weight:bold;color:#333;margin:10px 0 8px;display:flex;align-items:center;justify-content:space-between}
-  .bar-wrap{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
-  .total-bar-container {margin-top: 10px;}
-  .bar-bg{background:#f0f0f0;border-radius:10px;height:25px;overflow:hidden;width:100%;position:relative}
-  .bar-fill{height:100%;border-radius:10px;transition:width .6s ease-in-out;background:#34a853}
-  .bar-text{position:absolute;width:100%;text-align:center;top:0;line-height:25px;font-size:12px;font-weight:bold;color:#333}
-  .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:auto;margin-bottom:14px}
+
+  /* NUEVA BARRA SEGMENTADA */
+  section{padding:0 14px}
+  .bar-container {
+    background:#fff; border-radius:12px; padding:20px; 
+    box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:14px;
+  }
+  .stacked-bar {
+    display: flex; height: 35px; width: 100%; 
+    background: #eee; border-radius: 8px; overflow: hidden; margin: 15px 0;
+  }
+  .segment { height: 100%; transition: width 0.6s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; overflow: hidden; white-space: nowrap; }
+  .seg-ok { background: #34a853; }
+  .seg-diff { background: #fbbc04; }
+  .seg-miss { background: #ea4335; }
+
+  .legend { display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-top: 5px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:auto}
   table{width:100%;border-collapse:collapse;font-size:12px}
-  th{background:#f8f9fa;padding:9px 10px;text-align:left;color:#555;font-weight:600;border-bottom:1px solid #eee;white-space:nowrap}
-  td{padding:8px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
-  .tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap}
+  th{background:#f8f9fa;padding:10px;text-align:left;color:#555;border-bottom:1px solid #eee}
+  td{padding:10px;border-bottom:1px solid #f5f5f5}
+  .tag{padding:3px 8px;border-radius:12px;font-size:10px;font-weight:bold}
   .tag-ok{background:#e8f5e9;color:#2e7d32}
   .tag-diff{background:#fff3e0;color:#e65100}
   .tag-miss{background:#fce8e6;color:#c62828}
-  .tag-extra{background:#e8eaf6;color:#283593}
-  .loading{text-align:center;padding:50px 20px;color:#aaa;font-size:15px}
+
   .modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200}
-  .modal-bg.open{display:flex;align-items:flex-start;justify-content:center;padding-top:60px}
-  .modal{background:#fff;border-radius:14px;width:95%;max-width:960px;max-height:82vh;display:flex;flex-direction:column}
-  .modal-header{padding:14px 16px;background:#1a73e8;color:#fff;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center}
-  .modal-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1}
-  .modal-body{overflow:auto;padding:14px;flex:1}
+  .modal-bg.open{display:flex;align-items:center;justify-content:center}
+  .modal{background:#fff;border-radius:14px;width:95%;max-width:900px;max-height:80vh;display:flex;flex-direction:column}
+  .modal-header{padding:15px;background:#1a73e8;color:#fff;display:flex;justify-content:space-between;border-radius:14px 14px 0 0}
+  .modal-body{overflow:auto;padding:15px}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📊 Avance General de Inventario</h1>
+  <h1>📊 Dashboard Inventario Real-Time</h1>
   <span id="last-update">—</span>
 </header>
 
@@ -72,21 +82,18 @@
   <button class="btn btn-blue" onclick="loadData()">🔄 Actualizar</button>
 </div>
 
-<div id="content"><div class="loading">⏳ Cargando...</div></div>
+<div id="content"></div>
 
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <div class="modal-header">
       <h3 id="modal-title">Detalle</h3>
-      <button class="modal-close" onclick="closeModal()">x</button>
+      <button style="background:none; border:none; color:white; font-size:20px; cursor:pointer" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div style="margin-bottom:10px">
-        <button class="btn btn-green" onclick="exportModal()">📥 Exportar Excel (CSV)</button>
-      </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>DUN</th><th>Descripción</th><th>Ubicación</th><th>Estado</th><th>BASE</th><th>Capturado</th><th>Dif.</th><th>Disp.</th></tr></thead>
+          <thead><tr><th>DUN</th><th>Ubicación</th><th>Estado</th><th>BASE</th><th>Captura</th><th>Dif.</th></tr></thead>
           <tbody id="modal-body"></tbody>
         </table>
       </div>
@@ -96,164 +103,119 @@
 
 <script>
 var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec";
-var baseData = [], captureData = [], analysis = [], modalData = [];
+var baseData = [], captureData = [], analysis = [];
 
 async function loadData() {
-  document.getElementById("content").innerHTML = "<div class='loading'>⏳ Obteniendo datos...</div>";
+  document.getElementById("content").innerHTML = "<div style='text-align:center;padding:50px'>⏳ Cargando datos...</div>";
   try {
-    var r1 = await fetch(API + "?type=base");
-    var r2 = await fetch(API + "?type=captures");
+    const [r1, r2] = await Promise.all([fetch(API+"?type=base"), fetch(API+"?type=captures")]);
     baseData = await r1.json();
     captureData = await r2.json();
-    document.getElementById("last-update").textContent = "Actualizado: " + new Date().toLocaleTimeString();
+    document.getElementById("last-update").textContent = "Corte: " + new Date().toLocaleTimeString();
     buildDeviceFilter();
     render();
-  } catch(err) {
-    document.getElementById("content").innerHTML = "<div class='loading'>❌ Error de conexión</div>";
-  }
+  } catch(e) { document.getElementById("content").innerHTML = "❌ Error al cargar"; }
 }
 
 function buildDeviceFilter() {
-  var devs = [];
-  captureData.forEach(function(r){ if(r.Dispositivo && devs.indexOf(r.Dispositivo)===-1) devs.push(r.Dispositivo); });
-  devs.sort((a,b)=>a-b);
-  var sel = document.getElementById("filter-device");
+  const devs = [...new Set(captureData.map(r => r.Dispositivo))].sort((a,b)=>a-b);
+  const sel = document.getElementById("filter-device");
   sel.innerHTML = "<option value='all'>Todos los dispositivos</option>";
-  devs.forEach(function(d){
-    var o = document.createElement("option");
-    o.value = d; o.textContent = "Dispositivo " + String(d).padStart(2,"0");
-    sel.appendChild(o);
-  });
+  devs.forEach(d => { if(d) sel.innerHTML += `<option value="${d}">Dispositivo ${String(d).padStart(2,'0')}</option>`; });
 }
 
 function analyze() {
-  var devFilter = document.getElementById("filter-device").value;
-  var caps = devFilter === "all" ? captureData : captureData.filter(r => String(r.Dispositivo) === String(devFilter));
-
-  var capMap = {};
+  const devFilter = document.getElementById("filter-device").value;
+  const caps = devFilter === "all" ? captureData : captureData.filter(r => String(r.Dispositivo) === devFilter);
+  
+  const capMap = {};
   caps.forEach(r => {
-    var dunRaw = String(r.DUN || "").trim().toUpperCase();
-    if (dunRaw === "" || dunRaw === "VACIO") dunRaw = "VACIA";
-    var key = dunRaw + "||" + String(r.Ubicacion).trim();
-    if (!capMap[key]) capMap[key] = {dun:dunRaw, ubicacion:r.Ubicacion, cantidad:0, dispositivos:[]};
-    capMap[key].cantidad += parseFloat(r.Cantidad)||0;
-    if (!capMap[key].dispositivos.includes(r.Dispositivo)) capMap[key].dispositivos.push(r.Dispositivo);
+    let dun = String(r.DUN||"").trim().toUpperCase();
+    if(dun==="" || dun==="VACIO") dun = "VACIA";
+    const key = dun + "||" + String(r.Ubicacion).trim();
+    if(!capMap[key]) capMap[key] = {cant:0, devs:[]};
+    capMap[key].cant += parseFloat(r.Cantidad)||0;
+    if(!capMap[key].devs.includes(r.Dispositivo)) capMap[key].devs.push(r.Dispositivo);
   });
 
-  analysis = [];
-  var baseKeys = {};
-  baseData.forEach(b => {
-    var dun = String(b.DUN||"").trim().toUpperCase();
-    if (!dun || dun === "VACIO") dun = "VACIA";
-    var ubic = String(b.Ubicacion||"").trim();
-    var cantBase = parseFloat(b.Cantidad||0);
-    if (!ubic) return;
-
-    var key = dun + "||" + ubic;
-    baseKeys[key] = true;
-    var cap = capMap[key];
-    var diff = cap ? cap.cantidad - cantBase : -cantBase;
-    var status = cap ? (Math.abs(diff) < 0.01 ? "ok" : "diff") : "miss";
-    
-    analysis.push({dun, desc:b.Descripcion||"", ubicacion:ubic, cantBase, cantCap:cap?cap.cantidad:0, diff, status, dispositivos:cap?cap.dispositivos:[]});
-  });
-
-  Object.keys(capMap).forEach(key => {
-    if (!baseKeys[key]) {
-      var c = capMap[key];
-      if (c.dun !== "VACIA") {
-        analysis.push({dun:c.dun, desc:"EXTRA", ubicacion:c.ubicacion, cantBase:0, cantCap:c.cantidad, diff:c.cantidad, status:"extra", dispositivos:c.dispositivos});
-      }
-    }
+  analysis = baseData.map(b => {
+    let dun = String(b.DUN||"").trim().toUpperCase();
+    if(!dun || dun==="VACIO") dun = "VACIA";
+    const ubic = String(b.Ubicacion).trim();
+    const key = dun + "||" + ubic;
+    const cap = capMap[key];
+    const cantBase = parseFloat(b.Cantidad)||0;
+    const cantCap = cap ? cap.cant : 0;
+    const diff = cantCap - cantBase;
+    const status = cap ? (Math.abs(diff) < 0.01 ? "ok" : "diff") : "miss";
+    return { dun, ubic, cantBase, cantCap, diff, status, desc: b.Descripcion };
   });
 }
 
 function render() {
   analyze();
-  var total = analysis.filter(r => r.status !== "extra").length;
-  var ok = analysis.filter(r => r.status === "ok").length;
-  var diff = analysis.filter(r => r.status === "diff").length;
-  var miss = analysis.filter(r => r.status === "miss").length;
-  var extra = analysis.filter(r => r.status === "extra").length;
-  var pct = total > 0 ? Math.round(ok / total * 100) : 0;
+  const total = analysis.length;
+  const ok = analysis.filter(r => r.status === "ok").length;
+  const diff = analysis.filter(r => r.status === "diff").length;
+  const miss = analysis.filter(r => r.status === "miss").length;
+
+  const pOk = ((ok/total)*100).toFixed(1);
+  const pDiff = ((diff/total)*100).toFixed(1);
+  const pMiss = ((miss/total)*100).toFixed(1);
 
   document.getElementById("content").innerHTML = `
     <div class="progress-wrap">
       <div class="prog-circle">
         <svg width="110" height="110" viewBox="0 0 110 110">
           <circle class="bg" cx="55" cy="55" r="45"/>
-          <circle class="fill" cx="55" cy="55" r="45" stroke-dasharray="283" stroke-dashoffset="${283 - (283 * pct / 100)}"/>
+          <circle class="fill" cx="55" cy="55" r="45" stroke-dasharray="283" stroke-dashoffset="${283-(283*ok/total)}"/>
         </svg>
-        <div class="prog-label"><div class="pct">${pct}%</div><div class="sub">OK</div></div>
+        <div class="prog-label"><div class="pct">${Math.round(ok/total*100)}%</div></div>
       </div>
     </div>
 
     <div class="kpis">
-      <div class="kpi info" onclick="openModal('all','Total')"><div class="num">${total}</div><div class="lbl">Items Base</div></div>
-      <div class="kpi ok" onclick="openModal('ok','OK')"><div class="num">${ok}</div><div class="lbl">Correctos</div></div>
-      <div class="kpi warn" onclick="openModal('diff','Diferencias')"><div class="num">${diff}</div><div class="lbl">Diferencias</div></div>
-      <div class="kpi err" onclick="openModal('miss','Pendientes')"><div class="num">${miss}</div><div class="lbl">No encontrados</div></div>
+      <div class="kpi info" onclick="openModal('all')"><div class="num">${total}</div><div class="lbl">Total Base</div></div>
+      <div class="kpi ok" onclick="openModal('ok')"><div class="num">${ok}</div><div class="lbl">Correctos</div></div>
+      <div class="kpi warn" onclick="openModal('diff')"><div class="num">${diff}</div><div class="lbl">Diferencias</div></div>
+      <div class="kpi err" onclick="openModal('miss')"><div class="num">${miss}</div><div class="lbl">Pendientes</div></div>
     </div>
 
     <section>
-      <h2>Progreso Total del Inventario</h2>
-      <div class="bar-wrap">
-        <p style="font-size:12px; color:#666; margin-bottom:5px;">Porcentaje de ubicaciones correctas respecto al total:</p>
-        <div class="bar-bg">
-          <div class="bar-fill" style="width:${pct}%"></div>
-          <div class="bar-text">${pct}% Completado</div>
+      <div class="bar-container">
+        <h2 style="font-size:14px; color:#333">Distribución del Inventario</h2>
+        <div class="stacked-bar">
+          <div class="segment seg-ok" style="width:${pOk}%">${ok > 0 ? pOk+'%' : ''}</div>
+          <div class="segment seg-diff" style="width:${pDiff}%">${diff > 0 ? pDiff+'%' : ''}</div>
+          <div class="segment seg-miss" style="width:${pMiss}%">${miss > 0 ? pMiss+'%' : ''}</div>
         </div>
-        <div style="margin-top:15px; display:flex; justify-content:space-between;">
-           <button class="btn btn-green" onclick="exportAll()">📥 Exportar Reporte Completo</button>
+        <div class="legend">
+          <div class="legend-item"><span class="dot seg-ok"></span> OK (${ok})</div>
+          <div class="legend-item"><span class="dot seg-diff"></span> Diferencia (${diff})</div>
+          <div class="legend-item"><span class="dot seg-miss"></span> Pendiente (${miss})</div>
         </div>
       </div>
     </section>
   `;
 }
 
-function openModal(filter, title) {
-  var data = filter === "all" ? analysis.filter(r => r.status !== "extra") : analysis.filter(r => r.status === filter);
-  modalData = data;
-  document.getElementById("modal-title").textContent = title + " (" + data.length + ")";
-  renderModalTable(data);
+function openModal(filter) {
+  const data = filter === 'all' ? analysis : analysis.filter(r => r.status === filter);
+  document.getElementById("modal-title").textContent = "Detalle: " + filter.toUpperCase();
+  document.getElementById("modal-body").innerHTML = data.map(r => `
+    <tr>
+      <td>${r.dun}</td>
+      <td>${r.ubic}</td>
+      <td><span class="tag tag-${r.status}">${r.status.toUpperCase()}</span></td>
+      <td>${r.cantBase}</td>
+      <td>${r.cantCap}</td>
+      <td style="color:${r.diff<0?'red':'blue'}">${r.diff}</td>
+    </tr>
+  `).join("");
   document.getElementById("modal-bg").classList.add("open");
 }
 
-function renderModalTable(data) {
-  var tbody = document.getElementById("modal-body");
-  tbody.innerHTML = data.map(r => `
-    <tr>
-      <td>${r.dun}</td>
-      <td style="color:#888; font-size:10px">${r.desc}</td>
-      <td>${r.ubicacion}</td>
-      <td>${tagHtml(r.status, r.diff)}</td>
-      <td>${r.cantBase}</td>
-      <td style="font-weight:bold">${r.cantCap}</td>
-      <td style="color:${r.diff < 0 ? '#ea4335' : '#1a73e8'}">${r.diff}</td>
-      <td>${r.dispositivos.join(", ")}</td>
-    </tr>
-  `).join("");
-}
-
-function tagHtml(s, d) {
-  if(s==="ok") return '<span class="tag tag-ok">OK</span>';
-  if(s==="miss") return '<span class="tag tag-miss">Faltante</span>';
-  if(s==="diff") return `<span class="tag tag-diff">${d > 0 ? '+' : ''}${d}</span>`;
-  return '<span class="tag tag-extra">Extra</span>';
-}
-
 function closeModal() { document.getElementById("modal-bg").classList.remove("open"); }
-function exportAll() { exportCSV(analysis, "reporte-inventario"); }
-function exportCSV(data, fname) {
-  var rows = [["DUN","Descripcion","Ubicacion","Estado","BASE","Capturado","Diferencia","Dispositivos"]];
-  data.forEach(r => rows.push([r.dun, r.desc, r.ubicacion, r.status, r.cantBase, r.cantCap, r.diff, r.dispositivos.join("|")]));
-  var csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\n");
-  var blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
-  var a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = fname+".csv";
-  a.click();
-}
 
 loadData();
 </script>

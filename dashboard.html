@@ -3,41 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calyco - Dashboard de Auditoría</title>
+    <title>Calyco - Dashboard de Auditoría Universal</title>
     <style>
         :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; --warning: #fbbc04; --bg: #f8f9fa; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: #3c4043; }
-        header { background: var(--primary); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .toolbar { background: white; padding: 15px 30px; display: flex; gap: 15px; border-bottom: 1px solid #dadce0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #3c4043; }
+        header { background: var(--primary); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .toolbar { background: white; padding: 15px 30px; display: flex; gap: 15px; border-bottom: 1px solid #dadce0; sticky; top: 0; z-index: 10; }
         select { padding: 10px; border: 1px solid #dadce0; border-radius: 8px; flex: 1; }
         .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; padding: 25px; }
-        .kpi { background: white; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: pointer; border-bottom: 6px solid transparent; }
+        .kpi { background: white; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: pointer; border-bottom: 6px solid transparent; transition: 0.2s; }
+        .kpi:hover { transform: translateY(-3px); }
         .kpi.ok { border-color: var(--success); } .kpi.ok .num { color: var(--success); }
         .kpi.neg { border-color: var(--danger); } .kpi.neg .num { color: var(--danger); }
-        .kpi.pos { border-color: var(--warning); } .kpi.pos .num { color: var(--warning); }
-        .kpi.miss { border-color: var(--primary); } .kpi.miss .num { color: var(--primary); }
         .num { font-size: 38px; font-weight: bold; }
         .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
         .modal-bg.active { display: flex; }
         .modal { background: white; border-radius: 15px; width: 95%; max-width: 1100px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
-        .modal-header { padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header { padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f8f9fa; padding: 15px; text-align: left; border-bottom: 2px solid #eee; position: sticky; top: 0; }
         td { padding: 15px; border-bottom: 1px solid #eee; }
+        .error-row { background: #fff5f5; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Calyco - Auditoría de Toma de Inventario</h1>
+    <h1>Calyco - Control de Inventario</h1>
     <span id="last-update">Sincronizando...</span>
 </header>
 
 <div class="toolbar">
     <select id="filter-device" onchange="render()"><option value="all">Todos los dispositivos</option></select>
-    <button class="btn" onclick="loadData()">🔄 Sincronizar Datos</button>
+    <button class="btn" onclick="loadData()">🔄 Actualizar Dashboard</button>
 </div>
 
 <div id="content"></div>
@@ -45,32 +45,46 @@
 <div class="modal-bg" id="modal-bg">
     <div class="modal">
         <div class="modal-header">
-            <h3 id="modal-title">Detalle</h3>
+            <h3 id="modal-title">Detalle de Registros</h3>
             <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
         </div>
-        <div style="overflow:auto;"><table id="modal-table">
-            <thead><tr><th>Ubicación</th><th>DUN Base</th><th>DUN Captura</th><th>Estado</th><th>Base</th><th>Captura</th><th>Dif.</th></tr></thead>
-            <tbody id="modal-table-body"></tbody>
-        </table></div>
+        <div style="overflow:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ubicación</th>
+                        <th>DUN Base</th>
+                        <th>DUN Captura</th>
+                        <th>Estado</th>
+                        <th>Base</th>
+                        <th>Captura</th>
+                        <th>Dif.</th>
+                    </tr>
+                </thead>
+                <tbody id="modal-table-body"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // CAMBIA ESTA URL POR LA TUYA
-    var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec";
+    // URL de tu Apps Script
+    var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec"; 
     
     var baseData = [], captureData = [], analysis = [];
 
     async function loadData() {
-        document.getElementById("content").innerHTML = "<div style='text-align:center;padding:50px;'>Cargando...</div>";
+        document.getElementById("content").innerHTML = "<div style='padding:50px; text-align:center;'>Cargando datos...</div>";
         try {
             const [r1, r2] = await Promise.all([fetch(API + "?type=base"), fetch(API + "?type=captures")]);
             baseData = await r1.json();
             captureData = await r2.json();
-            document.getElementById("last-update").textContent = "Corte: " + new Date().toLocaleTimeString();
+            document.getElementById("last-update").textContent = "Último corte: " + new Date().toLocaleTimeString();
             buildDeviceFilter();
             render();
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            document.getElementById("content").innerHTML = "<div style='padding:50px; text-align:center; color:red;'>Error de conexión con la API</div>";
+        }
     }
 
     function buildDeviceFilter() {
@@ -96,7 +110,7 @@
             const uKey = String(b.Ubicacion).trim().toUpperCase();
             const dunBase = String(b.DUN || "VACIA").trim().toUpperCase();
             
-            // LÓGICA DE DETECCIÓN DE COLUMNA: Intentamos Cantidad, cantidad, CANTIDAD o la 4ta columna
+            // Intento de lectura de cantidad (columna Cantidad o la quinta posición)
             let rawCant = b.Cantidad || b.cantidad || b.CANTIDAD || Object.values(b)[4]; 
             const cantBase = parseFloat(String(rawCant).replace(/[^0-9.-]+/g,"")) || 0;
             
@@ -106,15 +120,29 @@
             const diff = cantCap - cantBase;
             
             let status = "miss";
+            let forzarError = false;
+
             if (hasCapture) {
-                // Si la base tiene unidades y el capturador dice VACIA -> NEGATIVO (-12)
-                if (cantBase > 0 && dunCap === "VACIA") status = "neg";
-                else if (dunBase !== "VACIA" && dunCap !== "VACIA" && dunBase !== dunCap) status = "neg";
-                else if (Math.abs(diff) < 0.01) status = "ok";
-                else status = diff < 0 ? "neg" : "pos";
+                // REGLA MAESTRA: Si la base tiene un DUN real pero capturaron "VACIA"
+                if (dunBase !== "VACIA" && dunCap === "VACIA") {
+                    status = "neg";
+                    forzarError = true;
+                } 
+                // REGLA: Si ambos tienen DUNs pero son distintos (Troque)
+                else if (dunBase !== "VACIA" && dunCap !== "VACIA" && dunBase !== dunCap) {
+                    status = "neg";
+                    forzarError = true;
+                }
+                // REGLA NUMÉRICA: Solo si los DUNs coinciden (o ambos son VACIA) validamos la cantidad
+                else if (Math.abs(diff) < 0.01) {
+                    status = "ok";
+                }
+                else {
+                    status = diff < 0 ? "neg" : "pos";
+                }
             }
             
-            return { Ubicacion: uKey, dunBase, dunCap, cantBase, cantCap, diff, status };
+            return { uKey, dunBase, dunCap, cantBase, cantCap, diff, status, forzarError };
         });
     }
 
@@ -127,10 +155,10 @@
 
         document.getElementById("content").innerHTML = `
             <div class="kpis">
-                <div class="kpi ok" onclick="openModal('ok')"><div class="num">${ok}</div><div class="lbl">OK</div></div>
+                <div class="kpi ok" onclick="openModal('ok')"><div class="num">${ok}</div><div class="lbl">Correctos (OK)</div></div>
                 <div class="kpi neg" onclick="openModal('neg')"><div class="num">${neg}</div><div class="lbl">Diferencias / Errores</div></div>
-                <div class="kpi pos" onclick="openModal('pos')"><div class="num">${pos}</div><div class="lbl">Sobrantes</div></div>
-                <div class="kpi miss" onclick="openModal('miss')"><div class="num">${miss}</div><div class="lbl">Sin Capturar</div></div>
+                <div class="kpi pos" onclick="openModal('pos')"><div class="num">${pos}</div><div class="lbl">Sobrantes (+)</div></div>
+                <div class="kpi miss" onclick="openModal('miss')"><div class="num">${miss}</div><div class="lbl">Pendientes</div></div>
             </div>
         `;
     }
@@ -138,14 +166,14 @@
     function openModal(f) {
         const data = analysis.filter(r => r.status === f);
         document.getElementById("modal-table-body").innerHTML = data.map(r => `
-            <tr>
-                <td><strong>${r.Ubicacion}</strong></td>
+            <tr class="${r.forzarError ? 'error-row' : ''}">
+                <td><strong>${r.uKey}</strong></td>
                 <td>${r.dunBase}</td>
-                <td>${r.dunCap}</td>
-                <td><span style="color:white;padding:3px 8px;border-radius:5px;background:${r.status==='ok'?'#34a853':r.status==='neg'?'#ea4335':'#fbbc04'}">${r.status.toUpperCase()}</span></td>
+                <td style="${r.forzarError ? 'color:red; font-weight:bold;' : ''}">${r.dunCap}</td>
+                <td><span style="color:white;padding:4px 10px;border-radius:6px;background:${r.status==='ok'?'#34a853':r.status==='neg'?'#ea4335':'#fbbc04'}">${r.status.toUpperCase()}</span></td>
                 <td>${r.cantBase}</td>
                 <td>${r.cantCap}</td>
-                <td style="font-weight:bold;color:${r.diff<0?'red':r.diff>0?'orange':'green'}">${r.diff}</td>
+                <td style="font-weight:bold;color:${r.status==='neg'?'red':r.status==='pos'?'orange':'green'}">${r.diff}</td>
             </tr>
         `).join("");
         document.getElementById("modal-bg").classList.add("active");

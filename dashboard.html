@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Inventario</title>
+<title>Dashboard Inventario General</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:sans-serif;background:#f0f4f8;min-height:100vh;padding-bottom:40px}
@@ -35,39 +35,33 @@
   .prog-label .sub{font-size:10px;color:#888}
   section{padding:0 14px 6px}
   section h2{font-size:14px;font-weight:bold;color:#333;margin:10px 0 8px;display:flex;align-items:center;justify-content:space-between}
-  .bar-wrap{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
-  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer}
-  .bar-row:hover .bar-label{color:#1a73e8}
-  .bar-label{width:90px;font-size:12px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bar-bg{flex:1;background:#f0f0f0;border-radius:6px;height:18px;overflow:hidden}
-  .bar-fill{height:100%;border-radius:6px;transition:width .4s}
-  .bar-pct{width:34px;font-size:11px;text-align:right;color:#555}
+  .bar-wrap{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
+  .total-bar-container {margin-top: 10px;}
+  .bar-bg{background:#f0f0f0;border-radius:10px;height:25px;overflow:hidden;width:100%;position:relative}
+  .bar-fill{height:100%;border-radius:10px;transition:width .6s ease-in-out;background:#34a853}
+  .bar-text{position:absolute;width:100%;text-align:center;top:0;line-height:25px;font-size:12px;font-weight:bold;color:#333}
   .table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:auto;margin-bottom:14px}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th{background:#f8f9fa;padding:9px 10px;text-align:left;color:#555;font-weight:600;border-bottom:1px solid #eee;white-space:nowrap}
   td{padding:8px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
-  tr:last-child td{border-bottom:none}
   .tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap}
   .tag-ok{background:#e8f5e9;color:#2e7d32}
   .tag-diff{background:#fff3e0;color:#e65100}
   .tag-miss{background:#fce8e6;color:#c62828}
   .tag-extra{background:#e8eaf6;color:#283593}
   .loading{text-align:center;padding:50px 20px;color:#aaa;font-size:15px}
-  .empty-msg{text-align:center;padding:20px;color:#34a853;font-size:13px}
   .modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200}
   .modal-bg.open{display:flex;align-items:flex-start;justify-content:center;padding-top:60px}
   .modal{background:#fff;border-radius:14px;width:95%;max-width:960px;max-height:82vh;display:flex;flex-direction:column}
   .modal-header{padding:14px 16px;background:#1a73e8;color:#fff;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;align-items:center}
-  .modal-header h3{font-size:15px}
   .modal-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1}
   .modal-body{overflow:auto;padding:14px;flex:1}
-  .modal-footer{padding:12px 16px;border-top:1px solid #eee;display:flex;gap:8px}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📊 Dashboard Inventario</h1>
+  <h1>📊 Avance General de Inventario</h1>
   <span id="last-update">—</span>
 </header>
 
@@ -78,7 +72,7 @@
   <button class="btn btn-blue" onclick="loadData()">🔄 Actualizar</button>
 </div>
 
-<div id="content"><div class="loading">⏳ Conectando con Google Sheets...</div></div>
+<div id="content"><div class="loading">⏳ Cargando...</div></div>
 
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
@@ -90,26 +84,22 @@
       <div style="margin-bottom:10px">
         <button class="btn btn-green" onclick="exportModal()">📥 Exportar Excel (CSV)</button>
       </div>
-      <div class="table-wrap" style="margin:0">
+      <div class="table-wrap">
         <table>
-          <thead><tr><th>DUN</th><th>Descripcion</th><th>Ubicacion</th><th>Estado</th><th>BASE</th><th>Capturado</th><th>Dif.</th><th>Disp.</th></tr></thead>
+          <thead><tr><th>DUN</th><th>Descripción</th><th>Ubicación</th><th>Estado</th><th>BASE</th><th>Capturado</th><th>Dif.</th><th>Disp.</th></tr></thead>
           <tbody id="modal-body"></tbody>
         </table>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-blue" onclick="closeModal()">Cerrar</button>
     </div>
   </div>
 </div>
 
 <script>
-// URL DE TU API (SCRIPT DE GOOGLE)
 var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec";
 var baseData = [], captureData = [], analysis = [], modalData = [];
 
 async function loadData() {
-  document.getElementById("content").innerHTML = "<div class='loading'>⏳ Cargando datos...</div>";
+  document.getElementById("content").innerHTML = "<div class='loading'>⏳ Obteniendo datos...</div>";
   try {
     var r1 = await fetch(API + "?type=base");
     var r2 = await fetch(API + "?type=captures");
@@ -119,207 +109,145 @@ async function loadData() {
     buildDeviceFilter();
     render();
   } catch(err) {
-    document.getElementById("content").innerHTML = "<div class='loading'>❌ Error: " + err.message + "</div>";
+    document.getElementById("content").innerHTML = "<div class='loading'>❌ Error de conexión</div>";
   }
 }
 
 function buildDeviceFilter() {
   var devs = [];
   captureData.forEach(function(r){ if(r.Dispositivo && devs.indexOf(r.Dispositivo)===-1) devs.push(r.Dispositivo); });
-  devs.sort(function(a,b){return a-b;});
+  devs.sort((a,b)=>a-b);
   var sel = document.getElementById("filter-device");
   sel.innerHTML = "<option value='all'>Todos los dispositivos</option>";
   devs.forEach(function(d){
     var o = document.createElement("option");
-    o.value = d;
-    o.textContent = "Dispositivo " + String(d).padStart(2,"0");
+    o.value = d; o.textContent = "Dispositivo " + String(d).padStart(2,"0");
     sel.appendChild(o);
   });
 }
 
 function analyze() {
   var devFilter = document.getElementById("filter-device").value;
-  var caps = devFilter === "all" ? captureData : captureData.filter(function(r){ return String(r.Dispositivo)===String(devFilter); });
+  var caps = devFilter === "all" ? captureData : captureData.filter(r => String(r.Dispositivo) === String(devFilter));
 
   var capMap = {};
-  caps.forEach(function(r) {
+  caps.forEach(r => {
     var dunRaw = String(r.DUN || "").trim().toUpperCase();
-    // Normalizamos nombres de "VACIA"
     if (dunRaw === "" || dunRaw === "VACIO") dunRaw = "VACIA";
-    
     var key = dunRaw + "||" + String(r.Ubicacion).trim();
-    
     if (!capMap[key]) capMap[key] = {dun:dunRaw, ubicacion:r.Ubicacion, cantidad:0, dispositivos:[]};
     capMap[key].cantidad += parseFloat(r.Cantidad)||0;
-    if (capMap[key].dispositivos.indexOf(r.Dispositivo)===-1) capMap[key].dispositivos.push(r.Dispositivo);
+    if (!capMap[key].dispositivos.includes(r.Dispositivo)) capMap[key].dispositivos.push(r.Dispositivo);
   });
 
   analysis = [];
   var baseKeys = {};
-  baseData.forEach(function(b) {
+  baseData.forEach(b => {
     var dun = String(b.DUN||"").trim().toUpperCase();
+    if (!dun || dun === "VACIO") dun = "VACIA";
     var ubic = String(b.Ubicacion||"").trim();
     var cantBase = parseFloat(b.Cantidad||0);
     if (!ubic) return;
-    
-    // Si la base está vacía, normalizamos a "VACIA" para el MATCH
-    if (!dun || dun === "VACIO") dun = "VACIA";
 
     var key = dun + "||" + ubic;
     baseKeys[key] = true;
     var cap = capMap[key];
-    var diff = 0, status;
+    var diff = cap ? cap.cantidad - cantBase : -cantBase;
+    var status = cap ? (Math.abs(diff) < 0.01 ? "ok" : "diff") : "miss";
     
-    if (!cap) { 
-      status = "miss"; 
-    } else { 
-      diff = cap.cantidad - cantBase; 
-      status = (Math.abs(diff) < 0.01) ? "ok" : "diff"; 
-    }
-    
-    analysis.push({
-      dun: dun, 
-      desc: b.Descripcion||"", 
-      ubicacion: ubic, 
-      cantBase: cantBase,
-      cantCap: cap ? cap.cantidad : 0, 
-      diff: diff, 
-      status: status, 
-      dispositivos: cap ? cap.dispositivos : []
-    });
+    analysis.push({dun, desc:b.Descripcion||"", ubicacion:ubic, cantBase, cantCap:cap?cap.cantidad:0, diff, status, dispositivos:cap?cap.dispositivos:[]});
   });
 
-  Object.keys(capMap).forEach(function(key) {
+  Object.keys(capMap).forEach(key => {
     if (!baseKeys[key]) {
       var c = capMap[key];
-      // No mostramos "VACIA" como extra si no estaba en base
-      if (c.dun === "VACIA") return; 
-
-      analysis.push({
-        dun: c.dun, 
-        desc: "EXTRA", 
-        ubicacion: c.ubicacion, 
-        cantBase: 0,
-        cantCap: c.cantidad, 
-        diff: c.cantidad, 
-        status: "extra", 
-        dispositivos: c.dispositivos
-      });
+      if (c.dun !== "VACIA") {
+        analysis.push({dun:c.dun, desc:"EXTRA", ubicacion:c.ubicacion, cantBase:0, cantCap:c.cantidad, diff:c.cantidad, status:"extra", dispositivos:c.dispositivos});
+      }
     }
   });
 }
 
 function render() {
   analyze();
-  var total = analysis.filter(function(r){return r.status!=="extra";}).length;
-  var ok    = analysis.filter(function(r){return r.status==="ok";}).length;
-  var diff  = analysis.filter(function(r){return r.status==="diff";}).length;
-  var miss  = analysis.filter(function(r){return r.status==="miss";}).length;
-  var extra = analysis.filter(function(r){return r.status==="extra";}).length;
-  var pct   = total>0 ? Math.round(ok/total*100) : 0;
-  var circ  = 283;
-  var offset = circ - (circ*pct/100);
+  var total = analysis.filter(r => r.status !== "extra").length;
+  var ok = analysis.filter(r => r.status === "ok").length;
+  var diff = analysis.filter(r => r.status === "diff").length;
+  var miss = analysis.filter(r => r.status === "miss").length;
+  var extra = analysis.filter(r => r.status === "extra").length;
+  var pct = total > 0 ? Math.round(ok / total * 100) : 0;
 
-  var ubMap = {};
-  analysis.forEach(function(r) {
-    if (!ubMap[r.ubicacion]) ubMap[r.ubicacion] = {ok:0,diff:0,miss:0,extra:0,total:0};
-    ubMap[r.ubicacion][r.status]++;
-    if (r.status!=="extra") ubMap[r.ubicacion].total++;
-  });
-  var ubList = Object.keys(ubMap).map(function(u){ return [u,ubMap[u]]; })
-    .filter(function(x){ return x[1].total>0; })
-    .sort(function(a,b){ return (a[1].ok/a[1].total)-(b[1].ok/b[1].total); });
+  document.getElementById("content").innerHTML = `
+    <div class="progress-wrap">
+      <div class="prog-circle">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle class="bg" cx="55" cy="55" r="45"/>
+          <circle class="fill" cx="55" cy="55" r="45" stroke-dasharray="283" stroke-dashoffset="${283 - (283 * pct / 100)}"/>
+        </svg>
+        <div class="prog-label"><div class="pct">${pct}%</div><div class="sub">OK</div></div>
+      </div>
+    </div>
 
-  document.getElementById("content").innerHTML =
-    "<div class='progress-wrap'>" +
-      "<div class='prog-circle'>" +
-        "<svg width='110' height='110' viewBox='0 0 110 110'>" +
-          "<circle class='bg' cx='55' cy='55' r='45'/>" +
-          "<circle class='fill' cx='55' cy='55' r='45' stroke-dasharray='"+circ+"' stroke-dashoffset='"+offset+"'/>" +
-        "</svg>" +
-        "<div class='prog-label'><div class='pct'>"+pct+"%</div><div class='sub'>Completado</div></div>" +
-      "</div>" +
-    "</div>" +
-    "<div class='kpis'>" +
-      "<div class='kpi info' onclick=\"openModal('all','Todos')\"><div class='num'>"+total+"</div><div class='lbl'>Total BASE</div></div>" +
-      "<div class='kpi ok' onclick=\"openModal('ok','OK')\"><div class='num'>"+ok+"</div><div class='lbl'>OK</div></div>" +
-      "<div class='kpi warn' onclick=\"openModal('diff','Diferencia')\"><div class='num'>"+diff+"</div><div class='lbl'>Diferencia</div></div>" +
-      "<div class='kpi err' onclick=\"openModal('miss','No Capturadas')\"><div class='num'>"+miss+"</div><div class='lbl'>No capturadas</div></div>" +
-      "<div class='kpi purple' onclick=\"openModal('extra','Extras')\"><div class='num'>"+extra+"</div><div class='lbl'>Extras</div></div>" +
-      "<div class='kpi warn' onclick=\"openModal('recontar','A Recontar')\"><div class='num'>"+(diff+miss)+"</div><div class='lbl'>A Recontar</div></div>" +
-    "</div>" +
-    "<section>" +
-      "<h2>Progreso por Ubicacion <button class='btn btn-green' style='font-size:11px;padding:5px 10px' onclick='exportAll()'>Exportar todo</button></h2>" +
-      "<div class='bar-wrap'>" +
-        ubList.map(function(x){
-          var ub=x[0],s=x[1];
-          var p=s.total>0?Math.round(s.ok/s.total*100):0;
-          var col=p===100?"#34a853":p===0?"#ea4335":"#fbbc04";
-          return "<div class='bar-row' onclick=\"openModalUbic('"+ub+"')\">" +
-            "<div class='bar-label' title='"+ub+"'>"+ub+"</div>" +
-            "<div class='bar-bg'><div class='bar-fill' style='width:"+p+"%;background:"+col+"'></div></div>" +
-            "<div class='bar-pct'>"+p+"%</div>" +
-          "</div>";
-        }).join("") +
-      "</div>" +
-    "</section>";
+    <div class="kpis">
+      <div class="kpi info" onclick="openModal('all','Total')"><div class="num">${total}</div><div class="lbl">Items Base</div></div>
+      <div class="kpi ok" onclick="openModal('ok','OK')"><div class="num">${ok}</div><div class="lbl">Correctos</div></div>
+      <div class="kpi warn" onclick="openModal('diff','Diferencias')"><div class="num">${diff}</div><div class="lbl">Diferencias</div></div>
+      <div class="kpi err" onclick="openModal('miss','Pendientes')"><div class="num">${miss}</div><div class="lbl">No encontrados</div></div>
+    </div>
+
+    <section>
+      <h2>Progreso Total del Inventario</h2>
+      <div class="bar-wrap">
+        <p style="font-size:12px; color:#666; margin-bottom:5px;">Porcentaje de ubicaciones correctas respecto al total:</p>
+        <div class="bar-bg">
+          <div class="bar-fill" style="width:${pct}%"></div>
+          <div class="bar-text">${pct}% Completado</div>
+        </div>
+        <div style="margin-top:15px; display:flex; justify-content:space-between;">
+           <button class="btn btn-green" onclick="exportAll()">📥 Exportar Reporte Completo</button>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function openModal(filter, title) {
-  var data;
-  if (filter==="all") data = analysis.filter(function(r){return r.status!=="extra";});
-  else if (filter==="recontar") data = analysis.filter(function(r){return r.status==="diff"||r.status==="miss";});
-  else data = analysis.filter(function(r){return r.status===filter;});
+  var data = filter === "all" ? analysis.filter(r => r.status !== "extra") : analysis.filter(r => r.status === filter);
   modalData = data;
   document.getElementById("modal-title").textContent = title + " (" + data.length + ")";
   renderModalTable(data);
   document.getElementById("modal-bg").classList.add("open");
 }
 
-function openModalUbic(ubic) {
-  var data = analysis.filter(function(r){return r.ubicacion===ubic;});
-  modalData = data;
-  document.getElementById("modal-title").textContent = ubic + " (" + data.length + ")";
-  renderModalTable(data);
-  document.getElementById("modal-bg").classList.add("open");
-}
-
 function renderModalTable(data) {
   var tbody = document.getElementById("modal-body");
-  if (!data.length) { tbody.innerHTML="<tr><td colspan='8' class='empty-msg'>Sin registros</td></tr>"; return; }
-  tbody.innerHTML = data.map(function(r){
-    var dc = r.diff<0?"#ea4335":r.diff>0?"#1a73e8":"#34a853";
-    return "<tr>" +
-      "<td style='font-size:11px'>"+r.dun+"</td>" +
-      "<td style='font-size:10px;color:#888'>"+r.desc+"</td>" +
-      "<td style='font-size:11px'>"+r.ubicacion+"</td>" +
-      "<td>"+tagHtml(r.status,r.diff)+"</td>" +
-      "<td>"+r.cantBase+"</td>" +
-      "<td style='font-weight:bold;color:"+dc+"'>"+r.cantCap+"</td>" +
-      "<td style='font-weight:bold;color:"+dc+"'>"+(r.diff>0?"+":"")+r.diff+"</td>" +
-      "<td style='font-size:11px'>"+r.dispositivos.join(", ")+"</td>" +
-    "</tr>";
-  }).join("");
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.dun}</td>
+      <td style="color:#888; font-size:10px">${r.desc}</td>
+      <td>${r.ubicacion}</td>
+      <td>${tagHtml(r.status, r.diff)}</td>
+      <td>${r.cantBase}</td>
+      <td style="font-weight:bold">${r.cantCap}</td>
+      <td style="color:${r.diff < 0 ? '#ea4335' : '#1a73e8'}">${r.diff}</td>
+      <td>${r.dispositivos.join(", ")}</td>
+    </tr>
+  `).join("");
+}
+
+function tagHtml(s, d) {
+  if(s==="ok") return '<span class="tag tag-ok">OK</span>';
+  if(s==="miss") return '<span class="tag tag-miss">Faltante</span>';
+  if(s==="diff") return `<span class="tag tag-diff">${d > 0 ? '+' : ''}${d}</span>`;
+  return '<span class="tag tag-extra">Extra</span>';
 }
 
 function closeModal() { document.getElementById("modal-bg").classList.remove("open"); }
-
-function tagHtml(s,diff) {
-  if(s==="ok")    return "<span class='tag tag-ok'>OK</span>";
-  if(s==="miss")  return "<span class='tag tag-miss'>No capturada</span>";
-  if(s==="extra") return "<span class='tag tag-extra'>Extra</span>";
-  if(s==="diff")  return "<span class='tag tag-diff'>"+(diff>0?"+":"")+diff+"</span>";
-  return s;
-}
-
+function exportAll() { exportCSV(analysis, "reporte-inventario"); }
 function exportCSV(data, fname) {
   var rows = [["DUN","Descripcion","Ubicacion","Estado","BASE","Capturado","Diferencia","Dispositivos"]];
-  data.forEach(function(r){
-    rows.push([r.dun, r.desc, r.ubicacion, r.status, r.cantBase, r.cantCap, r.diff, r.dispositivos.join("|")]);
-  });
-  var csv = rows.map(function(r){
-    return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(",");
-  }).join("\n");
+  data.forEach(r => rows.push([r.dun, r.desc, r.ubicacion, r.status, r.cantBase, r.cantCap, r.diff, r.dispositivos.join("|")]));
+  var csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\n");
   var blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
   var a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -327,11 +255,7 @@ function exportCSV(data, fname) {
   a.click();
 }
 
-function exportModal() { exportCSV(modalData, "inventario-filtrado"); }
-function exportAll()    { exportCSV(analysis, "inventario-completo"); }
-
 loadData();
 </script>
-
 </body>
 </html>

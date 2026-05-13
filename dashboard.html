@@ -3,38 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calyco - Auditoría de Inventario (Versión Corregida)</title>
+    <title>Calyco - Auditoría Pro con Filtros y Excel</title>
     <style>
         :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; --warning: #fbbc04; --bg: #f8f9fa; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: #3c4043; }
         header { background: var(--primary); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .toolbar { background: white; padding: 15px 30px; display: flex; gap: 15px; border-bottom: 1px solid #dadce0; position: sticky; top: 0; z-index: 99; }
-        .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        
+        .toolbar { background: white; padding: 15px 30px; display: flex; gap: 15px; border-bottom: 1px solid #dadce0; position: sticky; top: 0; z-index: 99; align-items: center; }
+        .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-excel { background: #1d6f42; } /* Color Excel */
+        
         .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; padding: 25px; }
         .kpi { background: white; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: pointer; border-bottom: 6px solid transparent; transition: 0.2s; }
         .kpi.ok { border-color: var(--success); } .kpi.ok .num { color: var(--success); }
         .kpi.neg { border-color: var(--danger); } .kpi.neg .num { color: var(--danger); }
         .kpi.pos { border-color: var(--warning); } .kpi.pos .num { color: var(--warning); }
         .num { font-size: 38px; font-weight: bold; }
+
         .card { background: white; border-radius: 12px; padding: 25px; margin: 0 25px 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .progress-bar { display: flex; height: 35px; background: #e8eaed; border-radius: 8px; overflow: hidden; margin: 20px 0; }
         .segment { height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
+
         .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
         .modal-bg.active { display: flex; }
-        .modal { background: white; border-radius: 15px; width: 95%; max-width: 1100px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+        .modal { background: white; border-radius: 15px; width: 95%; max-width: 1200px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
         .modal-header { padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Estilos Buscador y Filtros */
+        .modal-sub-tools { padding: 15px 20px; background: #f1f3f4; display: flex; justify-content: space-between; gap: 20px; }
+        #searchInput { padding: 10px; width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+
         .modal-body { overflow: auto; padding: 0; }
-        table { width: 100%; border-collapse: collapse; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th { background: #f8f9fa; padding: 15px; text-align: left; border-bottom: 2px solid #eee; position: sticky; top: 0; }
-        td { padding: 15px; border-bottom: 1px solid #eee; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .badge { padding: 4px 8px; border-radius: 4px; color: white; font-weight: bold; font-size: 11px; }
     </style>
 </head>
 <body>
 
 <header>
     <h1>Calyco - Auditoría de Toma de Inventario</h1>
-    <span id="last-update">Sincronizando...</span>
+    <span id="last-update">Esperando sincronización...</span>
 </header>
 
 <div class="toolbar">
@@ -43,17 +55,26 @@
 
 <div id="content"></div>
 
+<!-- MODAL DE DETALLES -->
 <div class="modal-bg" id="modal-bg">
     <div class="modal">
         <div class="modal-header">
             <h3 id="modal-title">Detalle de Ubicaciones</h3>
             <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
         </div>
+        
+        <!-- Herramientas del Modal: Buscador y Excel -->
+        <div class="modal-sub-tools">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar ubicación o DUN..." onkeyup="filterTable()">
+            <button class="btn btn-excel" onclick="exportToExcel()">📊 Exportar a Excel</button>
+        </div>
+
         <div class="modal-body">
-            <table>
+            <table id="auditTable">
                 <thead>
                     <tr>
                         <th>Ubicación</th>
+                        <th>ID Disp.</th>
                         <th>DUN Base</th>
                         <th>DUN Captura</th>
                         <th>Estado</th>
@@ -68,79 +89,61 @@
     </div>
 </div>
 
+<!-- Librería necesaria para Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <script>
-    // REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
     var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec"; 
-    
     var baseData = [], captureData = [], analysis = [];
 
     async function loadData() {
-        document.getElementById("content").innerHTML = "<div style='text-align:center;padding:100px;'>Cargando...</div>";
+        document.getElementById("content").innerHTML = "<div style='text-align:center;padding:100px;'>Cargando datos maestros...</div>";
         try {
             const [r1, r2] = await Promise.all([fetch(API + "?type=base"), fetch(API + "?type=captures")]);
             baseData = await r1.json();
             captureData = await r2.json();
             document.getElementById("last-update").textContent = "Corte: " + new Date().toLocaleTimeString();
             render();
-        } catch(e) { alert("Error de conexión"); }
+        } catch(e) { alert("Error al conectar con la base de datos de Google."); }
     }
 
     function analyze() {
         const capMap = {};
-        
-        // 1. Mapear capturas de dispositivos
         captureData.forEach(r => {
             const vals = Object.values(r);
             const uKey = String(r.Ubicacion || r.UBICACION || vals[0] || "").trim().toUpperCase();
             if (!uKey) return;
-
             const dunCapRaw = String(r.DUN || vals[1] || "").trim().toUpperCase();
             const cantCap = parseFloat(r.Cantidad || r.CANTIDAD || vals[4]) || 0;
+            const idDisp = r["ID Disp"] || r.ID_DISP || vals[6] || "-";
 
-            if (!capMap[uKey]) capMap[uKey] = { cant: 0, duns: [] };
-            
-            // Si no es un registro de "vacío", guardamos los datos capturados
+            if (!capMap[uKey]) capMap[uKey] = { cant: 0, duns: [], devices: [] };
             if (dunCapRaw !== "VACIA" && dunCapRaw !== "VACIO" && dunCapRaw !== "" && cantCap > 0) {
                 capMap[uKey].cant += cantCap;
-                capMap[uKey].duns.push(dunCapRaw);
+                if (!capMap[uKey].duns.includes(dunCapRaw)) capMap[uKey].duns.push(dunCapRaw);
+                if (!capMap[uKey].devices.includes(idDisp)) capMap[uKey].devices.push(idDisp);
             }
         });
 
-        // 2. Cruzar con la Base para detectar diferencias
         analysis = baseData.map(b => {
             const vals = Object.values(b);
             const uKey = String(b.Ubicacion || b.UBICACION || vals[0] || "").trim().toUpperCase();
             const dBaseRaw = String(b.DUN || b.dun || vals[1] || "VACIA").trim().toUpperCase();
             const qBase = parseFloat(b.Cantidad || b.CANTIDAD || vals[4]) || 0; 
-            
-            const cap = capMap[uKey] || { cant: 0, duns: [] };
+            const cap = capMap[uKey] || { cant: 0, duns: [], devices: [] };
             const qCap = cap.cant;
             const dCap = cap.duns.length > 0 ? cap.duns.join(", ") : "VACIA";
-            
-            // Estandarizamos texto para el reporte visual
+            const deviceID = cap.devices.length > 0 ? cap.devices.join("/") : "-";
             const dBaseReport = (dBaseRaw === "VACIA" || dBaseRaw === "VACIO" || qBase === 0) ? "VACIA" : dBaseRaw;
 
             let diff = qCap - qBase;
             let status = "ok";
+            if (qBase > 0 && qCap === 0) { status = "neg"; diff = -qBase; } 
+            else if (qBase === 0 && qCap > 0) { status = "pos"; diff = qCap; }
+            else if (Math.abs(diff) > 0.001) { status = diff < 0 ? "neg" : "pos"; }
+            else { status = "ok"; diff = 0; }
 
-            // Lógica de Auditoría Correcta
-            if (qBase > 0 && qCap === 0) {
-                status = "neg"; // Faltante: Base tiene stock, capturador no encontró nada.
-                diff = -qBase;
-            } 
-            else if (qBase === 0 && qCap > 0) {
-                status = "pos"; // Sobrante: Base vacía, capturador encontró stock.
-                diff = qCap;
-            }
-            else if (Math.abs(diff) > 0.001) {
-                status = diff < 0 ? "neg" : "pos"; // Diferencias parciales.
-            }
-            else {
-                status = "ok"; // Todo coincide (incluye ambos lados VACÍOS).
-                diff = 0;
-            }
-
-            return { loc: uKey, dBase: dBaseReport, dCap, qBase, qCap, diff, status };
+            return { loc: uKey, idDisp: deviceID, dBase: dBaseReport, dCap, qBase, qCap, diff, status };
         });
     }
 
@@ -156,8 +159,8 @@
         document.getElementById("content").innerHTML = `
             <div class="kpis">
                 <div class="kpi ok" onclick="openModal('ok')"><div class="num">${stats.ok}</div><div class="lbl">OK / VACÍOS</div></div>
-                <div class="kpi neg" onclick="openModal('neg')"><div class="num">${stats.neg}</div><div class="lbl">Diferencia (-)</div></div>
-                <div class="kpi pos" onclick="openModal('pos')"><div class="num">${stats.pos}</div><div class="lbl">Sobrante (+)</div></div>
+                <div class="kpi neg" onclick="openModal('neg')"><div class="num">${stats.neg}</div><div class="lbl">Faltantes (-)</div></div>
+                <div class="kpi pos" onclick="openModal('pos')"><div class="num">${stats.pos}</div><div class="lbl">Sobrantes (+)</div></div>
             </div>
             <div class="card">
                 <p><strong>Avance General</strong></p>
@@ -173,18 +176,38 @@
     function openModal(f) {
         const data = analysis.filter(r => r.status === f);
         document.getElementById("modal-title").textContent = f === 'ok' ? "Ubicaciones Correctas" : f === 'neg' ? "Faltantes detectados" : "Sobrantes detectados";
+        document.getElementById("searchInput").value = ""; // Limpiar buscador
         document.getElementById("modal-table-body").innerHTML = data.map(r => `
             <tr>
                 <td><strong>${r.loc}</strong></td>
+                <td>${r.idDisp}</td>
                 <td>${r.dBase}</td>
                 <td>${r.dCap}</td>
-                <td><span style="padding:4px 8px; border-radius:4px; color:white; background:${r.status==='ok'?'#34a853':r.status==='neg'?'#ea4335':'#fbbc04'}">${r.status.toUpperCase()}</span></td>
+                <td><span class="badge" style="background:${r.status==='ok'?'#34a853':r.status==='neg'?'#ea4335':'#fbbc04'}">${r.status.toUpperCase()}</span></td>
                 <td>${r.qBase}</td>
                 <td>${r.qCap}</td>
                 <td style="font-weight:bold; color:${r.diff<0?'red':r.diff>0?'orange':'green'}">${r.diff}</td>
             </tr>
         `).join("");
         document.getElementById("modal-bg").classList.add("active");
+    }
+
+    // Función de Buscador
+    function filterTable() {
+        let input = document.getElementById("searchInput").value.toUpperCase();
+        let tr = document.getElementById("modal-table-body").getElementsByTagName("tr");
+        for (let i = 0; i < tr.length; i++) {
+            let txtValue = tr[i].textContent || tr[i].innerText;
+            tr[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
+        }
+    }
+
+    // Función para Exportar a Excel
+    function exportToExcel() {
+        let table = document.getElementById("auditTable");
+        let wb = XLSX.utils.table_to_book(table, {sheet: "Auditoria"});
+        let fileName = "Auditoria_Calyco_" + new Date().toLocaleDateString() + ".xlsx";
+        XLSX.writeFile(wb, fileName);
     }
 
     function closeModal() { document.getElementById("modal-bg").classList.remove("active"); }

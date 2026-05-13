@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calyco - Dashboard de Inventario Profesional</title>
+    <title>Calyco - Auditoría de Inventario (Versión Final)</title>
     <style>
         :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; --warning: #fbbc04; --bg: #f8f9fa; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,8 +19,7 @@
         .num { font-size: 38px; font-weight: bold; }
         .card { background: white; border-radius: 12px; padding: 25px; margin: 0 25px 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .progress-bar { display: flex; height: 35px; background: #e8eaed; border-radius: 8px; overflow: hidden; margin: 20px 0; }
-        .segment { height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; transition: width 0.5s; }
-        /* MODAL */
+        .segment { height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
         .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
         .modal-bg.active { display: flex; }
         .modal { background: white; border-radius: 15px; width: 95%; max-width: 1100px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
@@ -35,11 +34,11 @@
 
 <header>
     <h1>Calyco - Auditoría de Toma de Inventario</h1>
-    <span id="last-update">Sincronizando datos...</span>
+    <span id="last-update">Sincronizando...</span>
 </header>
 
 <div class="toolbar">
-    <button class="btn" onclick="loadData()">🔄 Sincronizar Sheets</button>
+    <button class="btn" onclick="loadData()">🔄 Sincronizar Datos</button>
 </div>
 
 <div id="content"></div>
@@ -70,61 +69,58 @@
 </div>
 
 <script>
-    // URL de tu Apps Script implementado
-    var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec"; 
+    var API = "https://script.google.com/macros/s/AKfycbw95dL7cWDdpsuiwbqFo_jf1oDnq4cw3tUMRo-6LjgRuyiW0egJwax6TIQXkKtf5zIrmw/exec"; // REEMPLAZA CON TU URL
     
     var baseData = [], captureData = [], analysis = [];
 
     async function loadData() {
-        document.getElementById("content").innerHTML = "<div style='text-align:center;padding:100px;'>Cargando información...</div>";
+        document.getElementById("content").innerHTML = "<div style='text-align:center;padding:100px;'>Cargando...</div>";
         try {
-            const [r1, r2] = await Promise.all([
-                fetch(API + "?type=base"),
-                fetch(API + "?type=captures")
-            ]);
+            const [r1, r2] = await Promise.all([fetch(API + "?type=base"), fetch(API + "?type=captures")]);
             baseData = await r1.json();
             captureData = await r2.json();
-            document.getElementById("last-update").textContent = "Último corte: " + new Date().toLocaleTimeString();
+            document.getElementById("last-update").textContent = "Corte: " + new Date().toLocaleTimeString();
             render();
-        } catch(e) { console.error(e); }
+        } catch(e) { alert("Error de conexión"); }
     }
 
     function analyze() {
-        // Mapa de capturas consolidado por ubicación
         const capMap = {};
         captureData.forEach(r => {
-            const uKey = String(r.Ubicacion).trim().toUpperCase();
+            const uKey = String(r.Ubicacion || r.UBICACION || Object.values(r)[0]).trim().toUpperCase();
             if(!capMap[uKey]) capMap[uKey] = { cant: 0, duns: [] };
-            capMap[uKey].cant += parseFloat(r.Cantidad) || 0;
-            capMap[uKey].duns.push(String(r.DUN).trim().toUpperCase());
+            capMap[uKey].cant += parseFloat(r.Cantidad || r.CANTIDAD || Object.values(r)[4]) || 0;
+            capMap[uKey].duns.push(String(r.DUN || Object.values(r)[1]).trim().toUpperCase());
         });
 
         analysis = baseData.map(b => {
-            const uKey = String(b.Ubicacion).trim().toUpperCase();
-            const dBase = String(b.DUN || "VACIA").trim().toUpperCase();
-            // PRIORIDAD BASE: Tomamos la cantidad real de la planilla (ej. el 12)
-            const qBase = parseFloat(b.Cantidad || Object.values(b)[4]) || 0; 
+            const vals = Object.values(b);
+            const uKey = String(b.Ubicacion || b.UBICACION || vals[0]).trim().toUpperCase();
+            const dBase = String(b.DUN || b.dun || vals[1] || "VACIA").trim().toUpperCase();
+            
+            // CORRECCIÓN CRÍTICA: Mapeo manual por posición para evitar el error de la imagen
+            // Asumimos: Col 0: Ubicación, Col 1: DUN, Col 4: Cantidad
+            const qBase = parseFloat(b.Cantidad || b.CANTIDAD || vals[4]) || 0; 
             
             const cap = capMap[uKey] || { cant: 0, duns: ["SIN CAPTURA"] };
             const qCap = cap.cant;
             const dCap = cap.duns[0] || "VACIA";
             
-            // CÁLCULO DE DIFERENCIA: Siempre contra la base
             let diff = qCap - qBase;
             let status = "ok";
 
-            // REGLA: Si la base tiene producto y el capturador dice VACIA -> Diferencia Negativa
-            if (dBase !== "VACIA" && dCap === "VACIA") {
+            // Lógica de Diferencia: La base es la verdad
+            if (dBase !== "VACIA" && (dCap === "VACIA" || dCap === "SIN CAPTURA")) {
                 status = "neg";
-                diff = -qBase; // Fuerza la diferencia a lo que faltó de la base
-            } 
-            // REGLA: Si el capturador trae un DUN y la base dice VACIA -> Diferencia Positiva
-            else if (dBase === "VACIA" && dCap !== "VACIA" && dCap !== "SIN CAPTURA") {
+                diff = -qBase;
+            } else if (dBase === "VACIA" && dCap !== "VACIA" && dCap !== "SIN CAPTURA") {
                 status = "pos";
                 diff = qCap;
+            } else if (Math.abs(diff) < 0.01) {
+                status = "ok";
+            } else {
+                status = diff < 0 ? "neg" : "pos";
             }
-            else if (Math.abs(diff) < 0.01) status = "ok";
-            else status = diff < 0 ? "neg" : "pos";
 
             return { loc: uKey, dBase, dCap, qBase, qCap, diff, status };
         });
@@ -141,12 +137,12 @@
 
         document.getElementById("content").innerHTML = `
             <div class="kpis">
-                <div class="kpi ok" onclick="openModal('ok')"><div class="num">${stats.ok}</div><div class="lbl">Correctos</div></div>
+                <div class="kpi ok" onclick="openModal('ok')"><div class="num">${stats.ok}</div><div class="lbl">OK</div></div>
                 <div class="kpi neg" onclick="openModal('neg')"><div class="num">${stats.neg}</div><div class="lbl">Diferencia (-)</div></div>
                 <div class="kpi pos" onclick="openModal('pos')"><div class="num">${stats.pos}</div><div class="lbl">Sobrante (+)</div></div>
             </div>
             <div class="card">
-                <p><strong>Avance General del Inventario</strong></p>
+                <p><strong>Avance General</strong></p>
                 <div class="progress-bar">
                     <div class="segment" style="width:${(stats.ok/stats.total*100)}%; background:var(--success)">${stats.ok}</div>
                     <div class="segment" style="width:${(stats.neg/stats.total*100)}%; background:var(--danger)">${stats.neg}</div>
@@ -162,7 +158,8 @@
             <tr>
                 <td><strong>${r.loc}</strong></td>
                 <td>${r.dBase}</td>
-                <td style="${r.status==='neg' && r.dCap==='VACIA'?'color:red;font-weight:bold':''}">${r.dCap}</td>
+                <td>${r.dCap}</td>
+                <td><span style="padding:4px 8px; border-radius:4px; color:white; background:${r.status==='ok'?'#34a853':r.status==='neg'?'#ea4335':'#fbbc04'}">${r.status.toUpperCase()}</span></td>
                 <td>${r.qBase}</td>
                 <td>${r.qCap}</td>
                 <td style="font-weight:bold; color:${r.diff<0?'red':r.diff>0?'orange':'green'}">${r.diff}</td>
